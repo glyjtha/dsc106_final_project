@@ -1,165 +1,156 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<title>fNIRS Fatigue Gauge</title>
-<style>
-  body { font: 12px sans-serif; text-align:center; margin-top:40px; }
-  #gauge { margin: auto; }
-  #panel { 
-    position: absolute; top: 20px; right: 20px; 
-    padding: 10px; border: 1px solid #ccc; background: #f9f9f9;
-    display: none; text-align:left;
-  }
-  #panel h4 { margin:0 0 5px; font-size:14px; }
-</style>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pre→Post fNIRS Symphony</title>
+  <style>
+    body { font:14px sans-serif; text-align:center; padding:1em; background:#111; color:#fff; }
+    #controls { margin:1em 0; }
+    button { margin:0 .5em; padding:.5em 1em; font-size:1em; }
+    #visualizer {
+      width: 90%; height: 150px;  
+      margin: 1em auto; background:#222;
+    }
+    #subjectList { margin:1em 0; }
+    #subjectList li {
+      display:inline-block; margin:0 6px; padding:4px 8px;
+      background:#333; border-radius:4px; cursor:pointer;
+      user-select:none;
+    }
+    #subjectList li.active { background:#5a4; }
+  </style>
+</head>
 <body>
-  <h3>Brain Fatigue Gauge (mean ΔHbO)</h3>
-  <input type="range" id="condSlider" min="0" max="1" step="1" value="0">
-  <label for="condSlider"><span id="condLabel">pre</span></label>
-  <svg id="gauge" width="300" height="180"></svg>
-  <div id="panel">
-    <h4>Top 5 ΔHbO Changes</h4>
-    <ol id="topList"></ol>
+
+  <h2>▶ Pre→Post fNIRS Symphony</h2>
+
+  <ul id="subjectList"></ul>
+
+  <div id="controls">
+    <button id="playAll">▶ Play All</button>
+    <button id="playOne" disabled>▶ Play Selected</button>
+    <button id="pause">⏸ Pause</button>
   </div>
 
-  <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+  <canvas id="visualizer"></canvas>
+
   <script>
-  const svg    = d3.select("#gauge"),
-        width  = +svg.attr("width"),
-        height = +svg.attr("height"),
-        radius = Math.min(width, height*2)/2 - 20,
-        centerX = width/2,
-        centerY = height;
+  // —— Web Audio + Analyzer —— 
+  const AudioCtx = window.AudioContext||window.webkitAudioContext;
+  const ctx      = new AudioCtx();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 2048;
+  analyser.connect(ctx.destination);
 
-  // 1) Background arc
-  const arcBg = d3.arc()
-    .innerRadius(radius*0.7)
-    .outerRadius(radius*0.9)
-    .startAngle(-Math.PI)
-    .endAngle(0);
-  svg.append("path")
-    .attr("d", arcBg())
-    .attr("fill", "#eee")
-    .attr("transform", `translate(${centerX},${centerY})`);
-
-  // 1b) Foreground arc for filling
-  const arcFg = d3.arc()
-    .innerRadius(radius*0.7)
-    .outerRadius(radius*0.9)
-    .startAngle(-Math.PI);
-  const fg = svg.append("path")
-    .attr("fill", "#4caf50")
-    .attr("transform", `translate(${centerX},${centerY})`);
-
-  // 2) Color scale
-  const color = d3.scaleLinear()
-    .domain([0,1])
-    .range(["#4caf50","#f44336"]);
-
-  // 3) Ticks
-  const ticks = svg.append("g")
-    .attr("transform", `translate(${centerX},${centerY})`);
-  d3.range(0,1.01,0.1).forEach(t => {
-    const ang = -Math.PI + t*Math.PI;
-    ticks.append("line")
-      .attr("x1", Math.cos(ang)*radius*0.9)
-      .attr("y1", Math.sin(ang)*radius*0.9)
-      .attr("x2", Math.cos(ang)*radius*0.8)
-      .attr("y2", Math.sin(ang)*radius*0.8)
-      .attr("stroke","#666");
-  });
-
-  // 4) Needle
-  const needle = svg.append("line")
-    .attr("x1", centerX).attr("y1", centerY)
-    .attr("x2", centerX + Math.cos(-Math.PI)*radius*0.75)
-    .attr("y2", centerY + Math.sin(-Math.PI)*radius*0.75)
-    .attr("stroke","#333").attr("stroke-width",3)
-    .attr("stroke-linecap","round");
-
-  // 5) Load CSVs
-  // 5) Load and filter CSVs
-    let lookupPre = new Map(), lookupPost = new Map();
-    let channels  = [];
-
-    Promise.all([
-    d3.csv("fnirs_pre_summary.csv",  d => ({
-        subj: d.subject, ch: +d.channel, v: +d.mean_intensity
-    })),
-    d3.csv("fnirs_post_summary.csv", d => ({
-        subj: d.subject, ch: +d.channel, v: +d.mean_intensity
-    }))
-    ]).then(([preAll, postAll]) => {
-    const subjID = "001";  // change to whichever subject you want
-
-    // 1) Filter rows for that subject and channels 1–48
-    const pre  = preAll .filter(d => d.subj === subjID && d.ch >= 1 && d.ch <= 48);
-    const post = postAll.filter(d => d.subj === subjID && d.ch >= 1 && d.ch <= 48);
-
-    // 2) Build lookups
-    pre .forEach(d => lookupPre .set(d.ch, d.v));
-    post.forEach(d => lookupPost.set(d.ch, d.v));
-
-    // 3) Channel list = exactly the sorted 1–48
-    channels = pre.map(d => d.ch).sort((a,b)=>a-b);
-
-    // 4) Initial render
-    updateGauge(0);
-    });
-
-
-  // 6) Slider
-  d3.select("#condSlider").on("input", function(){
-    const mode = +this.value;
-    d3.select("#condLabel").text(mode? "post":"pre");
-    updateGauge(mode);
-  });
-
-  // 7) Update
-  function updateGauge(mode) {
-    const lookup = mode? lookupPost: lookupPre;
-    // compute mean in 0–1
-    const vals = channels.map(ch=>lookup.get(ch) ?? 0);
-    const mean = d3.mean(vals);
-
-    // fill arc
-    const endAng = -Math.PI + mean * Math.PI;
-    fg.transition().duration(800)
-      .attrTween("d", () => {
-        const interp = d3.interpolate(-Math.PI, endAng);
-        return t => arcFg({ endAngle: interp(t) });
-      })
-      .attr("fill", color(mean));
-
-    // move needle
-    needle.transition().duration(800)
-      .attrTween("x2", () => t => {
-        const a = -Math.PI + mean*t*Math.PI;
-        return centerX + Math.cos(a)*radius*0.75;
-      })
-      .attrTween("y2", () => t => {
-        const a = -Math.PI + mean*t*Math.PI;
-        return centerY + Math.sin(a)*radius*0.75;
-      })
-      .attr("stroke", color(mean));
-
-    // top‐5 panel
-    if(mode){
-      const diffs = channels.map(ch=>({
-        ch,
-        diff: Math.abs((lookupPost.get(ch)||0) - (lookupPre.get(ch)||0))
-      }));
-      const top5 = diffs.sort((a,b)=>b.diff - a.diff).slice(0,5);
-      const lis = d3.select("#topList").selectAll("li")
-        .data(top5, d=>d.ch);
-      lis.join("li")
-        .text(d=>`Channel ${d.ch}: Δ=${d.diff.toFixed(3)}`);
-    }
+  let scheduled = [];
+  function playNote(freq, t0, dur=0.3) {
+    const osc = ctx.createOscillator(), env = ctx.createGain();
+    osc.type = 'sine'; osc.frequency.value = freq;
+    osc.connect(env); env.connect(analyser);
+    env.gain.setValueAtTime(0, t0);
+    env.gain.linearRampToValueAtTime(0.5, t0+0.02);
+    env.gain.exponentialRampToValueAtTime(0.001, t0+dur);
+    osc.start(t0); osc.stop(t0+dur+0.05);
+    scheduled.push(osc);
+  }
+  function stopAll() {
+    scheduled.forEach(o=>{ try{ o.stop(); }catch{} });
+    scheduled = [];
   }
 
-  // 8) Toggle panel on click
-  svg.on("click", ()=>{
-    const p = d3.select("#panel");
-    p.style("display", p.style("display")==="none"? "block":"none");
+  
+  Promise.all([
+    fetch('fnirs_pre_summary.csv').then(r=>r.text()),
+    fetch('fnirs_post_summary.csv').then(r=>r.text())
+  ]).then(([preTxt, postTxt])=>{
+    const parse = txt=>txt.trim().split('\n').slice(1)
+      .map(l=>{ const [sub,cond,ch,v] = l.split(','); return { sub, ch:+ch, v:+v }; });
+    const pre = parse(preTxt).filter(d=>d.ch<=48);
+    const post= parse(postTxt).filter(d=>d.ch<=48);
+
+    const bySub = {};
+    pre.forEach(d=> (bySub[d.sub]??={pre:[],post:[]}).pre.push(d.v));
+    post.forEach(d=> (bySub[d.sub]??={pre:[],post:[]}).post.push(d.v));
+    const data = Object.entries(bySub).map(([sub,{pre,post}])=>({
+      sub,
+      meanPre: d3.mean(pre),
+      meanPost:d3.mean(post)
+    })).sort((a,b)=>a.sub.localeCompare(b.sub));
+
+    const mapFreq = v=>{
+      const norm = Math.max(0, Math.min(1,(v-0)/(0.8-0)));
+      return 220 + norm*(880-220);
+    };
+
+    // 渲染受试者列表
+    const ul = document.getElementById('subjectList');
+    data.forEach(d=>{
+      const li = document.createElement('li');
+      li.textContent = d.sub;
+      li.onclick = ()=>{
+        document.querySelectorAll('#subjectList li').forEach(x=>x.classList.remove('active'));
+        li.classList.add('active');
+        window._sel = d;
+        document.getElementById('playOne').disabled = false;
+      };
+      ul.append(li);
+    });
+
+    // play 
+    function scheduleOne(d, offset) {
+      [0,4,7].forEach((i,j)=>{
+        playNote(mapFreq(d.meanPre)*Math.pow(2,i/12), offset+j*0.15);
+      });
+      [0,4,7].forEach((i,j)=>{
+        playNote(mapFreq(d.meanPost)*Math.pow(2,i/12), offset+0.6+j*0.15);
+      });
+    }
+    document.getElementById('playOne').onclick = ()=>{
+      stopAll();
+      const now = ctx.currentTime + 0.1;
+      scheduleOne(window._sel, now);
+    };
+    document.getElementById('playAll').onclick = ()=>{
+      stopAll();
+      const now = ctx.currentTime + 0.1;
+      data.forEach((d,i)=> scheduleOne(d, now + i*1.2));
+    };
+    document.getElementById('pause').onclick = stopAll;
+
+    //wave visualization 
+    const canvas = document.getElementById('visualizer'),
+          C      = canvas.getContext('2d'),
+          bufferLength = analyser.fftSize,
+          WIDTH  = canvas.width  = canvas.offsetWidth,
+          HEIGHT = canvas.height = canvas.offsetHeight;
+
+    function drawWaveform() {
+      requestAnimationFrame(drawWaveform);
+      const dataArr = new Uint8Array(bufferLength);
+      analyser.getByteTimeDomainData(dataArr);
+
+      C.fillStyle = '#222';
+      C.fillRect(0,0,WIDTH,HEIGHT);
+
+      C.lineWidth   = 2;
+      C.strokeStyle = '#4C9AFF';
+      C.beginPath();
+
+      const sliceW = WIDTH / bufferLength;
+      let x = 0;
+      for(let i=0; i<bufferLength; i++){
+        const v = dataArr[i] - 128;
+        const y = (v/128)*(HEIGHT/2) + (HEIGHT/2);
+        i===0 ? C.moveTo(x,y) : C.lineTo(x,y);
+        x += sliceW;
+      }
+      C.stroke();
+    }
+    drawWaveform();
   });
+
+  // simple d3.mean
+  const d3 = { mean: arr=>arr.reduce((a,b)=>a+b,0)/arr.length };
   </script>
 </body>
+</html>
