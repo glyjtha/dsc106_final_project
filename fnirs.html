@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>fNIRS Fatigue Gauge</title>
+<style>
+  body { font: 12px sans-serif; text-align:center; margin-top:40px; }
+  #gauge { margin: auto; }
+  #panel { 
+    position: absolute; top: 20px; right: 20px; 
+    padding: 10px; border: 1px solid #ccc; background: #f9f9f9;
+    display: none; text-align:left;
+  }
+  #panel h4 { margin:0 0 5px; font-size:14px; }
+</style>
+<body>
+  <h3>Brain Fatigue Gauge (mean ΔHbO)</h3>
+  <input type="range" id="condSlider" min="0" max="1" step="1" value="0">
+  <label for="condSlider"><span id="condLabel">pre</span></label>
+  <svg id="gauge" width="300" height="180"></svg>
+  <div id="panel">
+    <h4>Top 5 ΔHbO Changes</h4>
+    <ol id="topList"></ol>
+  </div>
+
+  <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+  <script>
+  const svg    = d3.select("#gauge"),
+        width  = +svg.attr("width"),
+        height = +svg.attr("height"),
+        radius = Math.min(width, height*2)/2 - 20,
+        centerX = width/2,
+        centerY = height;
+
+  // 1) Background arc
+  const arcBg = d3.arc()
+    .innerRadius(radius*0.7)
+    .outerRadius(radius*0.9)
+    .startAngle(-Math.PI)
+    .endAngle(0);
+  svg.append("path")
+    .attr("d", arcBg())
+    .attr("fill", "#eee")
+    .attr("transform", `translate(${centerX},${centerY})`);
+
+  // 1b) Foreground arc for filling
+  const arcFg = d3.arc()
+    .innerRadius(radius*0.7)
+    .outerRadius(radius*0.9)
+    .startAngle(-Math.PI);
+  const fg = svg.append("path")
+    .attr("fill", "#4caf50")
+    .attr("transform", `translate(${centerX},${centerY})`);
+
+  // 2) Color scale
+  const color = d3.scaleLinear()
+    .domain([0,1])
+    .range(["#4caf50","#f44336"]);
+
+  // 3) Ticks
+  const ticks = svg.append("g")
+    .attr("transform", `translate(${centerX},${centerY})`);
+  d3.range(0,1.01,0.1).forEach(t => {
+    const ang = -Math.PI + t*Math.PI;
+    ticks.append("line")
+      .attr("x1", Math.cos(ang)*radius*0.9)
+      .attr("y1", Math.sin(ang)*radius*0.9)
+      .attr("x2", Math.cos(ang)*radius*0.8)
+      .attr("y2", Math.sin(ang)*radius*0.8)
+      .attr("stroke","#666");
+  });
+
+  // 4) Needle
+  const needle = svg.append("line")
+    .attr("x1", centerX).attr("y1", centerY)
+    .attr("x2", centerX + Math.cos(-Math.PI)*radius*0.75)
+    .attr("y2", centerY + Math.sin(-Math.PI)*radius*0.75)
+    .attr("stroke","#333").attr("stroke-width",3)
+    .attr("stroke-linecap","round");
+
+  // 5) Load CSVs
+  // 5) Load and filter CSVs
+    let lookupPre = new Map(), lookupPost = new Map();
+    let channels  = [];
+
+    Promise.all([
+    d3.csv("fnirs_pre_summary.csv",  d => ({
+        subj: d.subject, ch: +d.channel, v: +d.mean_intensity
+    })),
+    d3.csv("fnirs_post_summary.csv", d => ({
+        subj: d.subject, ch: +d.channel, v: +d.mean_intensity
+    }))
+    ]).then(([preAll, postAll]) => {
+    const subjID = "001";  // change to whichever subject you want
+
+    // 1) Filter rows for that subject and channels 1–48
+    const pre  = preAll .filter(d => d.subj === subjID && d.ch >= 1 && d.ch <= 48);
+    const post = postAll.filter(d => d.subj === subjID && d.ch >= 1 && d.ch <= 48);
+
+    // 2) Build lookups
+    pre .forEach(d => lookupPre .set(d.ch, d.v));
+    post.forEach(d => lookupPost.set(d.ch, d.v));
+
+    // 3) Channel list = exactly the sorted 1–48
+    channels = pre.map(d => d.ch).sort((a,b)=>a-b);
+
+    // 4) Initial render
+    updateGauge(0);
+    });
+
+
+  // 6) Slider
+  d3.select("#condSlider").on("input", function(){
+    const mode = +this.value;
+    d3.select("#condLabel").text(mode? "post":"pre");
+    updateGauge(mode);
+  });
+
+  // 7) Update
+  function updateGauge(mode) {
+    const lookup = mode? lookupPost: lookupPre;
+    // compute mean in 0–1
+    const vals = channels.map(ch=>lookup.get(ch) ?? 0);
+    const mean = d3.mean(vals);
+
+    // fill arc
+    const endAng = -Math.PI + mean * Math.PI;
+    fg.transition().duration(800)
+      .attrTween("d", () => {
+        const interp = d3.interpolate(-Math.PI, endAng);
+        return t => arcFg({ endAngle: interp(t) });
+      })
+      .attr("fill", color(mean));
+
+    // move needle
+    needle.transition().duration(800)
+      .attrTween("x2", () => t => {
+        const a = -Math.PI + mean*t*Math.PI;
+        return centerX + Math.cos(a)*radius*0.75;
+      })
+      .attrTween("y2", () => t => {
+        const a = -Math.PI + mean*t*Math.PI;
+        return centerY + Math.sin(a)*radius*0.75;
+      })
+      .attr("stroke", color(mean));
+
+    // top‐5 panel
+    if(mode){
+      const diffs = channels.map(ch=>({
+        ch,
+        diff: Math.abs((lookupPost.get(ch)||0) - (lookupPre.get(ch)||0))
+      }));
+      const top5 = diffs.sort((a,b)=>b.diff - a.diff).slice(0,5);
+      const lis = d3.select("#topList").selectAll("li")
+        .data(top5, d=>d.ch);
+      lis.join("li")
+        .text(d=>`Channel ${d.ch}: Δ=${d.diff.toFixed(3)}`);
+    }
+  }
+
+  // 8) Toggle panel on click
+  svg.on("click", ()=>{
+    const p = d3.select("#panel");
+    p.style("display", p.style("display")==="none"? "block":"none");
+  });
+  </script>
+</body>
