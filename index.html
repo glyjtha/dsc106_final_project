@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <title>Sleepy SD Dashboard</title>
   <style>
     /* ── Twilight Sleep Palette ───────────────────────────────────────────── */
@@ -99,7 +100,7 @@
       <li><a href="#game">Game</a></li>
       <li><a href="#cantab">CANTAB</a></li>
       <li><a href="#fnirs">fNIRS</a></li>
-      <li><a href="#discussion">Discussion</a></li>
+      <li><a href="#Writeup">Writeup</a></li>
       <li><a href="#data">Data</a></li>
     </ul>
   </nav>
@@ -112,21 +113,30 @@
     <section id="intro">
       <h3>Introduction</h3>
       <p>
-        We explore how missing one night of sleep impacts cognitive speed and brain blood-flow.
+        Are you a night owl? Have you go through lack of sleep? Do you know the effects of sleep Deprivation on your brain and your cognition?
+        Let's do several cognitive tests and see its effects. 
       </p>
     </section>
 
     <section id="methods">
       <h3>Methods</h3>
-      <p>PLACEHOLDER for your methods text…</p>
+      <p><li>We collected data from PhysioNet and did data processing and analysis.</li>
+        <li>We want to understand the mechanism between Sleep deprivation(SD) induced changes in brain functional connections and humans' cognitive performance impairment, and the change in functional connectivity can be detected by functional near-infrared spectroscopy(FNIRS).  
+        <li>It is good for investigating the change in connectivity during people’s resting state and doing tasks. We can see the spatial patterns in human frontal lobe and get the quantitative hemodynamic.</li></li>
+        In the study, we collect 10 young male adults and record their sleep pattern and other metrics(such as quality, hours and duration) before and after SD, and also many basal physiological parameters, we then do CANTAB and FNIRS tests on them.<br>
+        <li>Here, we visualize the results and analysis.</li>
+        </p>
     </section>
     
     <!-- Game Section -->
     <section id="game">
       <h3>🕹️ Cognitive Reaction Game</h3>
       <p style="margin:0 auto 16px; color:#cfd8e3; line-height:1.5;">
-        Test your reflexes in two quick rounds of Whack-a-Mole—once “well-rested” and then again after a simulated
-        24-hour sleep deprivation. See how much slower your reaction becomes when fatigue sets in!
+        Let's play!
+        Your task: trying to hit the orange dot when you see it is highlighted. <br>
+        <strong>Notice:</strong> There are 2 rounds!<br>
+        (<strong>Purpose:</strong> Test your reflexes in two quick rounds of Whack-a-Mole—once “well-rested” and then again after a simulated
+        24-hour sleep deprivation. See how much slower your reaction becomes when fatigue sets in!)
       </p>
       <div class="viz" style="padding:24px; border:4px dashed var(--accent2); border-radius:12px;">
         <iframe
@@ -139,7 +149,7 @@
     
 
     <section id="cantab">
-      <h3>Cambridge Neuropsychological Test Automated Battery Results</h3>
+      <h3>Cambridge Neuropsychological Test Automated Battery Results(CANTAB)</h3>
       <p style="color:#cfd8e3; line-height:1.5; margin:0 auto 16px;">
         This chart shows each adult individual performance on your chosen CANTAB metric before and after 24 hours of sleep deprivation.
         Use the dropdown to switch between Reaction Time (RTI), Paired-Associate Learning Errors (PAL),
@@ -178,15 +188,20 @@
       </div>
     </section>
 
-    <section id="discussion">
-      <h3>Discussion</h3>
-      <p>PLACEHOLDER for your discussion…</p>
+    <section id="Writeup">
+      <h3>Writeup</h3>
+      <p>
+        <li><strong>What have you done so far?</strong><br>
+        1. For now we finish the data cleaning and EDA analysis and generate sample statistical graphs, and part of the results are shown in the checkpoint file. 2. We also  generate a webpage containing different sections and our initial interactive data visualization, such as the statistics from different cognitive tasks, and the corresponding games(allowing users to play around to better understand the study). 3. We add a time axis enable users to see results in different subjects in different metrics, such as reaction time(RTI) and Spatial working memory Errors. 4. Besides that, we also add different sound tracks to enable users to listen and see the sonification graphs. 5. We also add CSS and color palette to improve aesthetics and clearity.</li> <br>
+        <li><strong>What will be the most challenging of your project to design and why?</strong><br>
+        1. The most challenging part is what statistics we should use because of the speciality of our data. 2. Our data focus on cognitive behavioral tests, and it is hard to explain what the task is doing without practical simulation and visualization, so we decide to integrate sample tasks to let users play around. 3. The data itself has flaws in correlation and a single statistic is hard to find correlation, so our graphs seem ordinary and lack interaction. 4. For example, we try to find correlation in latency and accuracy, but we just get horizontal lines finally, indicating lack of correlation. 5. Moreover, the interactive tools are limited because our subjects are similar in their demographics. 6. Last but not least, the important part FNIRS contains human brain functional connectivity, and it is difficult to demonstrate the change without a brain anatomy graph. 7. However, we are still looking for methods to integrate 3D view brains and enable interactive area functions, which will be the main challenge we do next. </li>
+      </p>
     </section>
 
     <section id="data">
       <h3>Data</h3>
       <ol>
-        <li>Download CSVs from PhysioNet…</li>
+        <p>Data from PhysioNet</p>
       </ol>
     </section>
 
