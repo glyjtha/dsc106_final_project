@@ -1,6 +1,20 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<body style="font-family: sans-serif;">
+<html lang="en">
+<meta charset="utf-8" />
+<head>
+  <title>CANTAB – Sleep‑Deprivation Interactive</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body{font-family:sans-serif;margin:0;padding:16px;}
+    label,select{font-size:14px;}
+    .slider-row{display:flex;align-items:center;gap:8px;width:800px;margin:8px 0;}
+    .slider-row span{font-size:12px;color:#555;white-space:nowrap;}
+    #tSlider{flex:1;accent-color:#4C9AFF;}
+    #meanDisplay{font-weight:600;margin:4px 0 10px;}
+    .axis-title{font-size:12px;fill:#333;}
+  </style>
+</head>
+<body>
   <label>Select Metric:
     <select id="metricSelect">
       <option value="RTI">Reaction Time (RTI)</option>
@@ -10,130 +24,129 @@
     </select>
   </label>
 
+  <div class="slider-row">
+    <span>Before sleep deprivation</span>
+    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0">
+    <span>After sleep deprivation</span>
+  </div>
 
-  <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0"
-         style="width: 600px; margin: 10px 0; display: block;">
+  <p id="meanDisplay"></p>
 
-  <svg id="chart" width="800" height="400"></svg>
+  <svg id="chart" width="800" height="450"></svg>
 
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script>
-  d3.csv("SD_CANTAB_DB_public.csv", d3.autoType).then(rawData => {
-    // 拆分数据
-    const clean      = rawData.filter(d=>d["Subject ID"]);
-    const beforeData = clean.filter(d=>d["Subject ID"].endsWith("_before"));
-    const afterData  = clean.filter(d=>d["Subject ID"].endsWith("_after"));
-    const ids        = beforeData.map(d=>d["Subject ID"].replace("_before",""));
+<script>
+d3.csv("SD_CANTAB_DB_public.csv", d3.autoType).then(rawData => {
+  // --- Data wrangling ------------------------------------------------------
+  const clean      = rawData.filter(d=>d["Subject ID"]);
+  const beforeData = clean.filter(d=>d["Subject ID"].endsWith("_before"));
+  const afterData  = clean.filter(d=>d["Subject ID"].endsWith("_after"));
+  const ids        = beforeData.map(d=>d["Subject ID"].replace("_before",""));
 
-    // 指标映射
-    const metricMap = {
-      RTI: d=>+d["RTIFMRT"],
-      PAL: d=>+d["PALTE"],
-      SWM: d=>+d["SWMS"],
-      RVP: d=>+d["RVPA"]
-    };
+  // mapping from metric to accessor + units + label
+  const metricMeta = {
+    RTI:{get:d=>+d["RTIFMRT"], unit:"ms",  label:"Reaction Time"},
+    PAL:{get:d=>+d["PALTE"],   unit:"errors", label:"PAL Errors"},
+    SWM:{get:d=>+d["SWMS"],    unit:"errors", label:"SWM Errors"},
+    RVP:{get:d=>+d["RVPA"],    unit:"A′",   label:"RVP Sensitivity"}
+  };
 
-    // SVG 和布局参数
-    const svg   = d3.select("#chart"),
-          W     = +svg.attr("width"),
-          H     = +svg.attr("height"),
-          leftW = 600,   // 左侧绘点区域宽度
-          pad   = 40;
+  // --- SVG setup -----------------------------------------------------------
+  const svg   = d3.select("#chart"),
+        W     = +svg.attr("width"),
+        H     = +svg.attr("height"),
+        leftW = 600,
+        pad   = 45;
 
-    // 画坐标轴组
-    const gx = svg.append("g")
-      .attr("transform", `translate(0,${H-pad})`);
-    const gy = svg.append("g")
-      .attr("transform", `translate(${pad},0)`);
+  const gx = svg.append("g").attr("transform",`translate(0,${H-pad})`);
+  const gy = svg.append("g").attr("transform",`translate(${pad},0)`);
 
-    // 绘制圆点组
-    const circles = svg.append("g").attr("class","pts")
-      .selectAll("circle")
-      .data(beforeData)
-      .join("circle")
-        .attr("r", 6)
-        .attr("fill", "#4C9AFF");
+  // axis titles
+  const xLabel = svg.append("text")
+      .attr("class","axis-title")
+      .attr("x", leftW/2)
+      .attr("y", H-10)
+      .attr("text-anchor","middle")
+      .text("Subject ID");
 
-    // 在右侧创建固定大小的动画区域
-    const animX = leftW + 20, animY = pad;
-    const anim = svg.append("g")
-      .attr("class","anim")
-      .attr("transform", `translate(${animX},${animY})`);
+  const yLabel = svg.append("text")
+      .attr("class","axis-title")
+      .attr("transform","rotate(-90)")
+      .attr("x", -H/2)
+      .attr("y", 18)
+      .attr("text-anchor","middle");
 
-    // 可视化边框（调试用，可删掉）
-    // anim.append("rect")
-    //   .attr("width", 80).attr("height", 80)
-    //   .attr("fill", "none").attr("stroke", "#ccc");
+  const circles = svg.append("g").attr("class","pts")
+        .selectAll("circle").data(beforeData)
+        .join("circle")
+          .attr("r",6)
+          .attr("fill","#4C9AFF");
 
-    // 插入两帧 PNG 图，尺寸固定 80×80
-    anim.append("image")
+  // right‑side animation (unchanged)
+  const animX = leftW + 20, animY = pad;
+  const anim = svg.append("g")
+      .attr("transform",`translate(${animX},${animY})`);
+
+  anim.append("image")
       .attr("class","open")
-      .attr("xlink:href","eye-open.png")
-      .attr("x", 0).attr("y", 0)
-      .attr("width", 200).attr("height", 250)
-      .attr("opacity", 1)
+      .attr("href","eye-open.png")
+      .attr("width",200).attr("height",250)
+      .attr("opacity",1)
       .attr("preserveAspectRatio","xMidYMid slice");
 
-    anim.append("image")
+  anim.append("image")
       .attr("class","yawn")
-      .attr("xlink:href","yawn.png")
-      .attr("x", 0).attr("y", 0)
-      .attr("width", 200).attr("height", 250)
-      .attr("opacity", 0)
+      .attr("href","yawn.png")
+      .attr("width",200).attr("height",250)
+      .attr("opacity",0)
       .attr("preserveAspectRatio","xMidYMid slice");
 
-    // 更新图表和动画的函数
-    function update(metricKey, t) {
-      const getVal = metricMap[metricKey];
+  // -------------------------------------------------------------------------
+  let metricKey = "RTI", t = 0;
+  update();
 
-      // 1) 重算比例尺
-      const allVals = beforeData.map(getVal).concat(afterData.map(getVal));
-      const xScale = d3.scalePoint()
-        .domain(ids)
-        .range([pad, leftW - pad]);
-      const yScale = d3.scaleLinear()
+  d3.select("#metricSelect").on("change", function(){ metricKey = this.value; update();});
+  d3.select("#tSlider").on("input", function(){ t = +this.value; update();});
+
+  function update(){
+    const {get, unit, label} = metricMeta[metricKey];
+
+    // mean Δ (post – pre)
+    const meanDelta = d3.mean(beforeData, (d,i)=> get(afterData[i]) - get(d));
+    d3.select("#meanDisplay")
+      .text(`Mean change (post – pre) in ${label}: ${meanDelta.toFixed(2)} ${unit}`);
+
+    // scales
+    const allVals = beforeData.map(get).concat(afterData.map(get));
+    const xScale = d3.scalePoint(ids, [pad, leftW-pad]);
+    const yScale = d3.scaleLinear()
         .domain(d3.extent(allVals)).nice()
-        .range([H - pad, pad]);
+        .range([H-pad, pad]);
 
-      // 2) 更新坐标轴
-      gx.call(d3.axisBottom(xScale).tickSize(0))
-        .selectAll("text")
-          .attr("transform","rotate(45)")
-          .style("text-anchor","start");
-      gy.call(d3.axisLeft(yScale));
+    // axis draw
+    gx.call(d3.axisBottom(xScale).tickSize(0))
+      .selectAll("text")
+        .attr("transform","rotate(45)")
+        .style("text-anchor","start");
+    gy.call(d3.axisLeft(yScale));
 
-      // 3) 圆点做插值更新
-      circles.data(beforeData.map((d,i) => {
-        const v0 = getVal(d),
-              v1 = getVal(afterData[i]);
-        return { id: ids[i], val: v0 + (v1 - v0)*t };
-      }))
-      .join("circle")
+    // axis title update
+    yLabel.text(`${label} (${unit})`);
+
+    // point interpolation
+    circles.data(beforeData.map((d,i)=>{
+      const v0 = get(d), v1 = get(afterData[i]);
+      return {id: ids[i], val: v0 + (v1 - v0)*t};
+    }))
+    .join("circle")
       .transition().duration(50)
-        .attr("cx", d=>xScale(d.id))
-        .attr("cy", d=>yScale(d.val));
+        .attr("cx", d=> xScale(d.id))
+        .attr("cy", d=> yScale(d.val));
 
-      // 4) 仅更新透明度，不再缩放
-      anim.select("image.open")
-        .attr("opacity", 1 - t);
-      anim.select("image.yawn")
-        .attr("opacity", t);
-    }
-
-    // 初始渲染
-    update("RTI", 0);
-
-    // 监听交互
-    d3.select("#metricSelect").on("change", function() {
-      const metric = this.value;
-      const t = +d3.select("#tSlider").property("value");
-      update(metric, t);
-    });
-    d3.select("#tSlider").on("input", function() {
-      const t = +this.value;
-      const metric = d3.select("#metricSelect").property("value");
-      update(metric, t);
-    });
-  });
-  </script>
+    // eye‑open ↔ yawn opacity
+    anim.select("image.open").attr("opacity", 1 - t);
+    anim.select("image.yawn").attr("opacity", t);
+  }
+});
+</script>
 </body>
+</html>
