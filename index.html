@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
   <title>Sleepy SD Dashboard</title>
   <style>
     /* ── Twilight Sleep Palette ───────────────────────────────────────────── */
@@ -100,7 +99,7 @@
       <li><a href="#game">Game</a></li>
       <li><a href="#cantab">CANTAB</a></li>
       <li><a href="#fnirs">fNIRS</a></li>
-      <li><a href="#Writeup">Writeup</a></li>
+      <li><a href="#discussion">Discussion</a></li>
       <li><a href="#data">Data</a></li>
     </ul>
   </nav>
@@ -113,30 +112,32 @@
     <section id="intro">
       <h3>Introduction</h3>
       <p>
-        Are you a night owl? Have you go through lack of sleep? Do you know the effects of sleep Deprivation on your brain and your cognition?
-        Let's do several cognitive tests and see its effects. 
+        Are you a night owl? Have you go through lack of sleep? Ever wondered what a sleepless night really does to your brain? <br>
+        In this dashboard, we explore the effects of 24-hour sleep deprivation on human cognition and brain function—through interactive tests, brain imaging, and real data analysis.
       </p>
     </section>
-
+    
     <section id="methods">
       <h3>Methods</h3>
-      <p><li>We collected data from PhysioNet and did data processing and analysis.</li>
-        <li>We want to understand the mechanism between Sleep deprivation(SD) induced changes in brain functional connections and humans' cognitive performance impairment, and the change in functional connectivity can be detected by functional near-infrared spectroscopy(FNIRS).  
-        <li>It is good for investigating the change in connectivity during people’s resting state and doing tasks. We can see the spatial patterns in human frontal lobe and get the quantitative hemodynamic.</li></li>
-        In the study, we collect 10 young male adults and record their sleep pattern and other metrics(such as quality, hours and duration) before and after SD, and also many basal physiological parameters, we then do CANTAB and FNIRS tests on them.<br>
-        <li>Here, we visualize the results and analysis.</li>
-        </p>
+      <p>
+        We used a publicly available dataset from PhysioNet, collecting data from 10 healthy young male adults. Participants completed cognitive and neuroimaging tests twice: once well-rested, and once after staying awake for 24 hours.<br><br>
+        Our analysis focuses on:
+        <ul style="margin-top: 10px; padding-left: 20px; line-height: 1.6;">
+          <li><strong>fNIRS (Functional Near-Infrared Spectroscopy):</strong> to detect changes in brain oxygenation, particularly in the frontal lobe, during rest and task conditions.</li>
+          <li><strong>CANTAB cognitive tasks:</strong> to measure reaction time, memory, attention, and error rates before and after sleep deprivation.</li>
+        </ul>
+        We processed the raw signals, cleaned the data, and visualized spatial and temporal changes in behavior and brain activity.
+      </p>
     </section>
+    
     
     <!-- Game Section -->
     <section id="game">
       <h3>🕹️ Cognitive Reaction Game</h3>
-      <p style="margin:0 auto 16px; color:#cfd8e3; line-height:1.5;">
-        Let's play!
-        Your task: trying to hit the orange dot when you see it is highlighted. <br>
-        <strong>Notice:</strong> There are 2 rounds!<br>
-        (<strong>Purpose:</strong> Test your reflexes in two quick rounds of Whack-a-Mole—once “well-rested” and then again after a simulated
-        24-hour sleep deprivation. See how much slower your reaction becomes when fatigue sets in!)
+      <p>
+        Can you stay sharp without sleep? <br>
+        In this interactive game, try to hit the orange dot as fast as possible. You'll play two rounds: one simulating a well-rested brain, and one simulating 24 hours of fatigue. <br>
+        Notice how your reaction time slows when sleep deprivation sets in.
       </p>
       <div class="viz" style="padding:24px; border:4px dashed var(--accent2); border-radius:12px;">
         <iframe
@@ -149,14 +150,25 @@
     
 
     <section id="cantab">
-      <h3>Cambridge Neuropsychological Test Automated Battery Results(CANTAB)</h3>
-      <p style="color:#cfd8e3; line-height:1.5; margin:0 auto 16px;">
-        This chart shows each adult individual performance on your chosen CANTAB metric before and after 24 hours of sleep deprivation.
-        Use the dropdown to switch between Reaction Time (RTI), Paired-Associate Learning Errors (PAL),
-        Spatial Working Memory Errors (SWM), or Sustained Attention Sensitivity (RVP), and drag the slider
-        to interpolate from “pre” (all the way left) to “post” (all the way right).
-        Points rising on the y-axis indicate worse performance for metrics where higher values are worse (e.g. RTI, errors),
-        or better performance for metrics where higher is better (e.g. RVP sensitivity).  
+      <h3>CANTAB Cognitive Test Results</h3>
+      <p>
+        Sleep deprivation doesn’t just make you tired—it rewires how your brain performs.<br><br>
+
+        In this interactive chart, each dot represents one participant. You can explore four critical cognitive functions:
+        <strong>Reaction Time (RTI)</strong>, <strong>Paired-Associate Learning Errors (PAL)</strong>,
+        <strong>Spatial Working Memory Errors (SWM)</strong>, and <strong>Sustained Attention (RVP)</strong>.<br><br>
+
+        Use the dropdown to switch metrics and the slider to slide between “before” and “after” sleep deprivation. 
+        <br><br>
+
+        🔵 Dots start in blue (baseline performance).  
+        As you move the slider to simulate sleep deprivation:
+        <ul style="line-height: 1.6; margin-left: 16px;">
+          <li>🟢 Dots turn green if performance improved (e.g., fewer errors, faster reaction)</li>
+          <li>🔴 Dots turn red if performance declined (e.g., slower reaction, more mistakes)</li>
+        </ul>
+
+        <em>Watch how some individuals adapt… and how others struggle under fatigue.</em>
       </p>
       <div 
         class="viz"
@@ -178,26 +190,31 @@
     
       
     <section id="fnirs">
-      <h3>fNIRS Sonification</h3>
+      <h3>fNIRS: Brain Signals in Sound and Color</h3>
+      <p>
+        fNIRS allows us to observe how the brain compensates for fatigue by measuring changes in oxygenated blood (ΔHbO) in the frontal lobe.
+        <br><br>
+        <strong>🎵 Sonification:</strong> Listen to how brain activity changes under stress. Louder, more active sound means the brain is working harder.
+        <br><br>
+        <strong>📊 Stats:</strong> The chart below shows each subject’s brain oxygenation shift before and after sleep deprivation. 
+        Red bars mark the individuals with the strongest changes—often indicating cognitive overload.
+      </p>
       <div class="viz">
         <iframe
           src="fnirs.html"
-          style="width:100%; height:400px; border:none; border-radius:8px; overflow:hidden;"
+          style="width:100%; height:400px; border:none; border-radius:8px;"
           title="fNIRS Sonification">
         </iframe>
       </div>
-    </section>
-
-    <section id="fnirs">
-      <h3>fNIRS Stats</h3>
-      <div class="viz">
+      <div class="viz" style="margin-top: 16px;">
         <iframe
           src="fnirs_stats.html"
-          style="width:100%; height:450px; border:none; border-radius:8px; overflow:hidden;"
+          style="width:100%; height:450px; border:none; border-radius:8px;"
           title="fNIRS stats">
         </iframe>
       </div>
     </section>
+    
 
     <section id="Writeup">
       <h3>Writeup</h3>
@@ -210,11 +227,12 @@
     </section>
 
     <section id="data">
-      <h3>Data</h3>
-      <ol>
-        <p>Data from PhysioNet</p>
-      </ol>
+      <h3>Data Sources</h3>
+      <p>
+        Data for this project is sourced from the <a href="https://physionet.org/" target="_blank" style="color: var(--accent); text-decoration: underline;">PhysioNet Sleep Deprivation fNIRS Dataset</a>.  
+      </p>
     </section>
+    
 
     <footer>
       © 2025 DSC106 | Team 404FOUND
