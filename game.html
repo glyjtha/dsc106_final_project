@@ -13,9 +13,9 @@
     }
     #game {
       display: grid;
-      grid-template-columns: repeat(5,100px);
+      grid-template-columns: repeat(4, 100px);  /* 4 columns = 4x4 grid */
       grid-gap: 10px;
-      width: 560px;
+      width: 440px;  /* 4 * 100px + 3 * 10px gap */
       margin: 20px auto;
     }
     .hole {
@@ -94,7 +94,7 @@
   <script>
   // Build 25 holes
   const gameEl = document.getElementById('game');
-  for(let i=0; i<25; i++){
+  for(let i=0; i<16; i++){
     const hole = document.createElement('div');
     hole.className = 'hole';
     const mole = document.createElement('div');
@@ -104,8 +104,8 @@
   }
 
   // Mock RTI data (replace with real data)
-  const beforeRTI = Array.from({length:25}, ()=>300 + Math.random()*200);
-  const afterRTI  = Array.from({length:25}, ()=>300 + Math.random()*200 + 100);
+  const beforeRTI = Array.from({length:16}, ()=>300 + Math.random()*200);
+  const afterRTI  = Array.from({length:16}, ()=>300 + Math.random()*200 + 100);
 
   let scoreBefore=0, scoreAfter=0;
   let popCount=0, round=0, timerId;
