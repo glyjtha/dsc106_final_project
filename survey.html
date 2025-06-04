@@ -72,7 +72,7 @@
 </head>
 <body>
     <section id="sleep-survey">
-        <h2>What is your sleep habit every day? 💤</h2>
+        <h2>What is your sleep habit every day?(answer question below) 💤</h2>
         <form id="sleepForm">
             <div id="question-container"></div>
             <div class="nav-buttons">
@@ -93,32 +93,32 @@
     <script>
         const questions = [
         {
-            label: "What time do you go to sleep every day?",
+            label: "1. What time do you go to sleep every day?",
             name: "sleep_time",
             options: ["Before 10pm", "10-11pm", "11-1pm", "After 1pm 🦉"]
         },
         {
-            label: "How long does it take you to fall asleep?",
+            label: "2. How long does it take you to fall asleep?",
             name: "fall_time",
             options: ["Right away", "Less than 10min", "10-20 min", "More than 20 min"]
         },
         {
-            label: "How long do you sleep every night?",
+            label: "3. How long do you sleep every night?",
             name: "sleep_length",
             options: ["<=5 hrs", "5-7 hrs", ">=7 hrs", "No I don't sleep 😏"]
         },
         {
-            label: "Do you wake in the night? How many times?",
+            label: "4. Do you wake in the night? How many times?",
             name: "wake_times",
             options: ["No I don't wake up in the night", "1 time", "2 or more times"]
         },
         {
-            label: "How often do you consume alcohol🍷 or caffeine☕️?",
+            label: "5. How often do you consume alcohol🍷 or caffeine☕️?",
             name: "caffeine",
             options: ["Never", "1 shot", "2 shots", ">2 shots"]
         },
         {
-            label: "Do you feel sleepy now? [1(momsleepy) ~ 10(very sleepy)]",
+            label: "6. Do you feel sleepy now? Yes, I mean now🌚[1(momsleepy) ~ 10(very sleepy)]",
             name: "sleepiness_score",
             type: "input"
         }
