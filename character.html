@@ -2,69 +2,130 @@
 <meta charset="utf-8">
 <body style="font-family: sans-serif; background: white;">
 
-  <div style="display: flex; align-items: center; width: 80%; margin: 20px auto; gap: 10px; font-size: 12px;">
+  <!-- Slider to interpolate between before / after sleep‑deprivation -->
+  <div style="display:flex;align-items:center;width:80%;margin:20px auto;gap:10px;font-size:12px;">
     <span>Before sleep deprivation</span>
-    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0" style="flex: 1; accent-color: #4C9AFF;">
+    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0" style="flex:1;accent-color:#4C9AFF;">
     <span>After sleep deprivation</span>
   </div>
-  
 
-  <div style="position: relative; width: 1000px; margin: auto;">
-    <svg id="chart" width="1000" height="420"></svg>
+  <!-- SVG + emoji overlay  -->
+  <div style="position:relative;width:1000px;margin:auto;">
+    <svg id="chart" width="1000" height="440"></svg>
 
     <img src="eye-open.png" id="eyeOpen"
-         style="position: absolute; top: 160px; left: 470px; width: 60px; opacity: 1;">
+         style="position:absolute;top:160px;left:470px;width:60px;opacity:1;">
     <img src="yawn.png" id="yawn"
-         style="position: absolute; top: 160px; left: 470px; width: 60px; opacity: 0;">
+         style="position:absolute;top:160px;left:470px;width:60px;opacity:0;">
   </div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
   d3.csv("SD_CANTAB_DB_public.csv", d3.autoType).then(rawData => {
+    /* ------------------------  data wrangling  ------------------------ */
     const clean      = rawData.filter(d => d["Subject ID"]);
     const beforeData = clean.filter(d => d["Subject ID"].endsWith("_before"));
     const afterData  = clean.filter(d => d["Subject ID"].endsWith("_after"));
     const ids        = beforeData.map(d => d["Subject ID"].replace("_before", ""));
 
     const metricMap = {
-      RTI: d => +d["RTIFMRT"],
-      PAL: d => +d["PALTE"],
-      SWM: d => +d["SWMS"],
-      RVP: d => +d["RVPA"]
+      RTI: d => +d["RTIFMRT"],                       // Reaction Time – ms
+      PAL: d => +d["PALTE"],                         // Paired Associate Learning – errors
+      SWM: d => +d["SWMS"],                          // Spatial Working Memory – errors
+      RVP: d => +d["RVPA"]                           // Sustained Attention A' – unitless
     };
 
+    /* ------------------------  SVG set‑up  ------------------------ */
     const svg = d3.select("#chart");
-    const W = +svg.attr("width"),
-          H = +svg.attr("height"),
+    const W   = +svg.attr("width"),
+          H   = +svg.attr("height"),
           pad = 40;
 
-    const metrics = ["RTI", "PAL", "SWM", "RVP"];
-    const plotWidth = 220;
-    const spacing = 20;
+    const metrics      = ["RTI", "PAL", "SWM", "RVP"];
+    const plotWidth    = 220;      // width of each small‑multiple panel
+    const spacing      = 20;       // horizontal spacing between panels
+
+    /* full metric names used for panel headings */
     const fullMetricNames = {
       RTI: "Reaction Time (RTI)",
-      PAL: "Paired-Associate Learning Errors (PAL)",
+      PAL: "Paired‑Associate Learning Errors (PAL)",
       SWM: "Spatial Working Memory Errors (SWM)",
       RVP: "Sustained Attention Sensitivity (RVP)"
     };
 
-    const plots = metrics.map((metric, i) => {
-      const x0 = i * (plotWidth + spacing) + pad;
-      const g = svg.append("g").attr("transform", `translate(${x0},0)`);
+    /* axis labels – *with* units */
+    const yAxisLabels = {
+      RTI: "Reaction Time (ms)",
+      PAL: "Errors (count)",
+      SWM: "Errors (count)",
+      RVP: "Sensitivity (A')"
+    };
 
-      // 添加 metric title
+    /* for computing whether a change is an improvement */
+    const betterIfHigher = { RTI:false, PAL:false, SWM:false, RVP:true };
+
+    /* ------------------------  mean changes (Δ after‑before)  ------------------------ */
+    const meanChanges = {};
+    metrics.forEach(m => {
+      const meanBefore = d3.mean(beforeData, metricMap[m]);
+      const meanAfter  = d3.mean(afterData,  metricMap[m]);
+      meanChanges[m]   = meanAfter - meanBefore;           // signed difference
+    });
+
+    /* ------------------------  build one panel per metric  ------------------------ */
+    const plots = metrics.map((metric, i) => {
+      const x0 = i * (plotWidth + spacing) + pad;          // panel offset
+      const g  = svg.append("g").attr("transform", `translate(${x0},0)`);
+
+      /* title */
       g.append("text")
-        .attr("x", plotWidth / 2)
-        .attr("y", 24)
+        .attr("x", plotWidth/2)
+        .attr("y", 20)
         .attr("text-anchor", "middle")
         .style("font-size", "13px")
         .style("fill", "#333")
         .text(fullMetricNames[metric]);
 
+      /* mean change annotation (after – before) */
+      const diff  = meanChanges[metric];
+      const arrow = diff >= 0 ? "\u2191" : "\u2193";      // up / down arrow
+      const diffStr = `${arrow} ${Math.abs(diff).toFixed(1)}`;
+      const diffColor = (betterIfHigher[metric] ? diff>0 : diff<0) ? "#00b894" : "#d63031";
 
-      const gx = g.append("g").attr("transform", `translate(0,${H - pad})`);
+      g.append("text")
+        .attr("x", plotWidth/2)
+        .attr("y", 38)
+        .attr("text-anchor", "middle")
+        .style("font-size", "12px")
+        .style("fill", diffColor)
+        .text(`Mean Δ: ${diffStr}`);
+
+      /* axis groups */
+      const gx = g.append("g").attr("transform", `translate(0,${H-pad})`);
       const gy = g.append("g").attr("transform", `translate(${pad},0)`);
 
+      /* y‑axis label */
+      g.append("text")
+        .attr("class", "yAxisLabel")
+        .attr("transform", "rotate(-90)")
+        .attr("x", -H/2)
+        .attr("y", pad-28)          // pull it away from tick labels
+        .attr("text-anchor", "middle")
+        .style("font-size", "11px")
+        .style("fill", "#555")
+        .text(yAxisLabels[metric]);
+
+      /* x‑axis label */
+      g.append("text")
+        .attr("class", "xAxisLabel")
+        .attr("x", plotWidth/2)
+        .attr("y", H-pad+34)        // below ticks → avoids overlap
+        .attr("text-anchor", "middle")
+        .style("font-size", "11px")
+        .style("fill", "#555")
+        .text("Subject ID");
+
+      /* data circles */
       const pts = g.append("g").attr("class", "pts").selectAll("circle")
         .data(ids)
         .join("circle")
@@ -77,71 +138,57 @@
       return { metric, gx, gy, pts };
     });
 
-    function update(t) {
-    const betterIfHigher = {
-      RTI: false,
-      PAL: false,
-      SWM: false,
-      RVP: true
-    };
+    /* ------------------------  draw / update function  ------------------------ */
+    function update(t){
+      plots.forEach(({ metric, gx, gy, pts }) => {
+        const getVal  = metricMap[metric];
+        const allVals = beforeData.map(getVal).concat(afterData.map(getVal));
 
-    plots.forEach(({ metric, gx, gy, pts }) => {
-      const getVal = metricMap[metric];
-      const allVals = beforeData.map(getVal).concat(afterData.map(getVal));
+        /* scales */
+        const xScale = d3.scalePoint()
+          .domain(ids)
+          .range([pad, plotWidth-pad]);
 
-      const xScale = d3.scalePoint()
-        .domain(ids)
-        .range([pad, plotWidth - pad]);
+        const yScale = d3.scaleLinear()
+          .domain(d3.extent(allVals)).nice()
+          .range([H-pad, pad+20]);
 
-      const yScale = d3.scaleLinear()
-        .domain(d3.extent(allVals)).nice()
-        .range([H - pad, pad + 20]);
+        /* axes */
+        gx.call(d3.axisBottom(xScale).tickSize(0))
+          .selectAll("text")
+            .attr("transform", "rotate(-65)")
+            .style("text-anchor", "end")
+            .style("font-size", "9px");
 
-      gx.call(d3.axisBottom(xScale)
-            .tickSize(0)
-            .tickFormat(d => d))
-        .selectAll("text")
-          .attr("transform", "rotate(-65)")
-          .style("text-anchor", "end")
-          .style("font-size", "9px");
+        gy.call(d3.axisLeft(yScale).ticks(4));
 
-      gy.call(d3.axisLeft(yScale).ticks(4));
+        /* colour interpolation toward green / red depending on improvement */
+        const baseColor = d3.color("#6c5ce7");
 
-      // Interpolate color: from base blue to red or green
-      const baseColor = d3.color("#6c5ce7"); // original blue
+        pts.data(beforeData.map((d,i) => {
+              const v0 = getVal(d);
+              const v1 = getVal(afterData[i]);
+              const isImproving = betterIfHigher[metric] ? v1>v0 : v1<v0;
+              const targetColor = d3.color(isImproving ? "#00b894" : "#d63031");
+              const interpColor = d3.interpolateRgb(baseColor, targetColor)(t);
+              return { id: ids[i], val: v0 + (v1 - v0)*t, color: interpColor };
+            }))
+            .join("circle")
+              .transition().duration(60)
+              .attr("cx", d => xScale(d.id))
+              .attr("cy", d => yScale(d.val))
+              .attr("fill", d => d.color);
+      });
 
-      pts.data(beforeData.map((d, i) => {
-        const v0 = getVal(d);
-        const v1 = getVal(afterData[i]);
-        const isImproving = betterIfHigher[metric] ? v1 > v0 : v1 < v0;
-        const targetColor = d3.color(isImproving ? "#00b894" : "#d63031"); // green or red
-        const interpColor = d3.interpolateRgb(baseColor, targetColor)(t);
+      /* swap emoji */
+      d3.select("#eyeOpen").style("opacity", 1-t);
+      d3.select("#yawn").style("opacity",  t);
+    }
 
-        return {
-          id: ids[i],
-          val: v0 + (v1 - v0) * t,
-          color: interpColor
-        };
-      }))
-      .join("circle")
-        .transition().duration(60)
-          .attr("cx", d => xScale(d.id))
-          .attr("cy", d => yScale(d.val))
-          .attr("fill", d => d.color);
-    });
-
-    // emoji opacity
-    d3.select("#eyeOpen").style("opacity", 1 - t);
-    d3.select("#yawn").style("opacity", t);
-  }
-
-
+    /* initial draw + slider listener */
     update(0);
-
-    d3.select("#tSlider").on("input", function () {
-      const t = +this.value;
-      update(t);
-    });
+    d3.select("#tSlider").on("input", function(){ update(+this.value); });
   });
   </script>
 </body>
+
