@@ -2,15 +2,20 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>fNIRS Sleep-Deprivation Brain Map</title>
+<title>fNIRS Brain-map - per-subject</title>
 <style>
  body{font-family:system-ui,Roboto,Arial,sans-serif;margin:1rem 2rem}
- h1  {margin-bottom:.25rem}
+ h1{margin-bottom:.25rem}
  #ctrl{margin-bottom:1rem;display:flex;gap:1.25rem;align-items:center}
  label{font-size:.9rem}
  input[type=range]{width:160px}
  svg{max-width:640px;height:auto}
- .region-outline{fill:none;stroke:#ccc;stroke-dasharray:3 3}
+ .region-outline{fill:none;stroke:#bbb;stroke-dasharray:4 4}
+ .tooltip{
+    position:absolute;pointer-events:none;padding:.4rem .6rem;
+    background:#222;color:#fff;border-radius:4px;font-size:.8rem;
+    opacity:0;transition:opacity .15s;
+ }
 </style>
 <script type="module" src="https://cdn.jsdelivr.net/npm/d3@7/+esm"></script>
 </head>
@@ -21,21 +26,67 @@
  <label><input type="radio" name="mode" value="pre">Pre-SD</label>
  <label><input type="radio" name="mode" value="post">Post-SD</label>
  <label><input type="radio" name="mode" value="diff" checked>Δ (Post-Pre)</label>
- <span>|&nbsp;Subject:</span>
+ <span>| Subject:</span>
  <input id="subj" type="range" min="0" max="0" step="1" value="0" disabled>
  <span id="sid"></span>
 </div>
 
 <svg id="head" viewBox="-120 -120 240 260"></svg>
 
+<div id="tip" class="tooltip"></div>
+
 <script type="module">
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+
 const svg   = d3.select('#head');
-const Rhead = 110, cell=14;      // head radius and channel spacing
-const slider=d3.select('#subj'), sid=d3.select('#sid');
+const Rhead = 130, dotR = 6;     // same geometry as before
+const cell = Math.floor((Rhead - dotR) / (7.5 * Math.SQRT2));
+const slider = d3.select('#subj'), sid = d3.select('#sid');
+const tip = d3.select('#tip');
 
 /* ------------------------------------------------------------------ */
-/* 1. Load csvs & pre-compute aggregates                              */
+/* 0.  Add brain drawing as a background image                        */
+/* ------------------------------------------------------------------ */
+svg.append('image')
+   .attr('href','brain_top.png')   // <- place your PNG next to this HTML
+   .attr('x',-115).attr('y',-115)
+   .attr('width',260).attr('height',260)
+   .attr('opacity',0.75)
+   .attr('pointer-events','none'); // let clicks fall through to dots/rects
+
+/* ------------------------------------------------------------------ */
+/* 1.  Region hit-areas + info --------------------------------------- */
+/* ------------------------------------------------------------------ */
+const lobes = [
+ {name:'Frontal Lobe',   y0:-115, y1:-25,
+  info:'Crucial for high-level cognition: planning, decision-making, voluntary movement, language, personality.'},
+ {name:'Temporal Lobe',  y0:-25,  y1:40,
+  info:'Processes auditory information, memory formation, language comprehension, emotion, and object recognition.'},
+ {name:'Occipital Lobe', y0:40,   y1:115,
+  info:'Primary centre for visual processing—shape, colour, motion, and spatial orientation.'}
+];
+
+svg.selectAll('rect.lobe')
+   .data(lobes)
+   .join('rect')
+     .attr('class','lobe')
+     .attr('x',-115).attr('width',230)
+     .attr('y',d=>d.y0).attr('height',d=>d.y1-d.y0)
+     .attr('fill','transparent')
+     .style('cursor','pointer')
+     .on('mouseover',(_,d)=>showTip(d.name, d.info))
+     .on('mouseout', hideTip);
+
+/* dashed guides for orientation (optional) */
+svg.selectAll('line.region-outline')
+   .data(lobes.slice(1))           // skip frontal top line
+   .join('line')
+   .attr('class','region-outline')
+   .attr('x1',-90).attr('x2',90)
+   .attr('y1',d=>d.y0).attr('y2',d=>d.y0);
+
+/* ------------------------------------------------------------------ */
+/* 2.  Load CSVs & prepare matrices                                   */
 /* ------------------------------------------------------------------ */
 Promise.all([
   d3.csv('fnirs_pre_summary.csv',  d3.autoType),
@@ -43,80 +94,68 @@ Promise.all([
 ]).then(([pre,post])=>{
   const subs = [...new Set(pre.map(d=>d.subject))].sort(d3.ascending);
 
-  /* build subject × 256 matrices ---------------------------------- */
-  function mat(arr){ return subs.map(s=> arr
-      .filter(d=>d.subject===s)
-      .sort((a,b)=>a.channel-b.channel)
-      .map(d=>d.mean_intensity)); }
+  const mPre  = buildMatrix(pre, subs);
+  const mPost = buildMatrix(post, subs);
+  const mDiff = mPost.map((row,i)=>row.map((v,j)=>v-mPre[i][j]));
 
-  const mPre  = mat(pre),
-        mPost = mat(post);
-  
-  const mDiff = mPost.map((row,i) =>              
-        row.map((v,j) => v - mPre[i][j]));
+  slider.attr('max', subs.length-1)
+        .property('disabled', false)
+        .on('input', draw)
+        .dispatch('input');
 
-  const avgPre  = d3.range(256).map(i=> d3.mean(mPre,  r=>r[i])),
-        avgPost = d3.range(256).map(i=> d3.mean(mPost, r=>r[i])),
-        diff    = avgPost.map((v,i)=>v-avgPre[i]);
-
-  /* slider --------------------------------------------------------- */
-  slider.attr('max', subs.length-1).property('disabled', false)
-        .on('input', draw).dispatch('input');
-
-  /* radio buttons -------------------------------------------------- */
   d3.selectAll('input[name=mode]').on('change', draw);
 
-  /* background head outline & lobar guides ------------------------- */
-  svg.append('circle').attr('r', Rhead).attr('cy',10).attr('fill','none')
-                      .attr('stroke','#999').attr('stroke-width',2);
-  const guides = [
-    {y:-60,l:'Frontal'}, {y:-20,l:'Motor'}, {y:20,l:'Parietal'},
-    {y:60,l:'Temporal'}, {y:95,l:'Occipital'}
-  ];
-  svg.selectAll('line.region-outline')
-      .data(guides).join('line')
-      .attr('class','region-outline')
-      .attr('x1',-95).attr('x2',95)
-      .attr('y1',d=>d.y).attr('y2',d=>d.y);
+  draw();
 
-  /* draw function -------------------------------------------------- */
   function draw(){
     const mode = d3.select('input[name=mode]:checked').property('value');
     const k    = +slider.property('value');
     sid.text(subs[k]);
 
-    let dat;
-    if(mode==='pre')      dat = mPre[k];
-    else if(mode==='post')dat = mPost[k];
-    else if(mode==='diff')dat = mPost[k]-mPre[k];
-    else                  dat = mDiff[k];
+    const dat = mode==='pre'  ? mPre[k] :
+                mode==='post' ? mPost[k] :
+                                mDiff[k];
 
-    const ext = mode==='diff'? d3.extent(dat): [0,d3.max(dat)];
-    const col = mode==='diff'
-        ? d3.scaleDiverging(ext, d3.interpolateRdBu)
-        : d3.scaleSequential(ext.reverse(), d3.interpolateViridis);
+    const extent = mode==='diff' ? d3.extent(dat) : [0, d3.max(dat)];
+    const color = mode==='diff'
+         ? d3.scaleDiverging(extent, d3.interpolateRdBu)
+         : d3.scaleSequential(extent.reverse(), d3.interpolateViridis);
 
-    const ch = svg.selectAll('circle.ch').data(dat);
-    ch.join('circle')
-      .attr('class','ch')
-      .attr('r',6)
-      .attr('cx',(d,i)=> ( (i%16)-7.5)*cell )
-      .attr('cy',(d,i)=> ( Math.floor(i/16)-7.5)*cell + 10 )
-      .attr('fill',d=>col(d))
-      .attr('stroke','#222').attr('stroke-width',0.5)
-      .on('mouseover', (ev,d,i)=>{
-         const idx=i+1, row=Math.floor(i/16);
-         const reg = row<2 ? 'Frontopolar' :
-                     row<4 ? 'DLPFC' :
-                     row<7 ? 'Premotor/Motor' :
-                     row<10? 'Parietal' :
-                     row<13? 'Temporal' : 'Occipital';
-         d3.select(ev.target).append('title')
-           .text(`Ch ${idx}\nRegion: ${reg}\n${mode==='diff'?'Δ:':'Mean:'} ${d.toFixed(4)}`);
-      });
+    const dots = svg.selectAll('circle.ch').data(dat);
+
+    dots.join('circle')
+        .attr('class','ch')
+        .attr('r',6)
+        .attr('cx',(d,i)=>( (i%16)-7.5)*cell)
+        .attr('cy',(d,i)=>(Math.floor(i/16)-7.5)*cell)
+        .attr('fill',d=>color(d))
+        .attr('stroke','#222').attr('stroke-width',0.5)
+        .on('mouseover',(ev,d,i)=>{
+            const idx=i+1;
+            showTip(`Channel ${idx}`, `${mode==='diff'?'Δ:':'Value:'} ${d.toFixed(4)}`);
+        })
+        .on('mouseout', hideTip);
   }
-  draw();  // first run
 });
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                            */
+/* ------------------------------------------------------------------ */
+function buildMatrix(arr, subs){
+  return subs.map(s=> arr
+        .filter(d=>d.subject===s)
+        .sort((a,b)=>a.channel-b.channel)
+        .map(d=>d.mean_intensity));
+}
+
+function showTip(title,text){
+  tip.html(`<strong>${title}</strong><br>${text}`)
+     .style('left', (d3.event?.pageX||0)+15+'px')
+     .style('top',  (d3.event?.pageY||0)+15+'px')
+     .style('opacity',1);
+}
+
+function hideTip(){ tip.style('opacity',0); }
 </script>
 </body>
 </html>
