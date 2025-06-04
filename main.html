@@ -235,11 +235,37 @@
       <h3>Writeup</h3>
       <p>
         <li><strong>What have you done so far?</strong><br>
-        1. For now we finish the data cleaning and EDA analysis and generate sample statistical graphs, and part of the results are shown in the checkpoint file. 2. We also  generate a webpage containing different sections and our initial interactive data visualization, such as the statistics from different cognitive tasks, and the corresponding games(allowing users to play around to better understand the study). 3. We add a time axis enable users to see results in different subjects in different metrics, such as reaction time(RTI) and Spatial working memory Errors. 4. Besides that, we also add different sound tracks to enable users to listen and see the sonification graphs. 5. We also add CSS and color palette to improve aesthetics and clearity.</li> <br>
+      1. For now we finish the data cleaning and EDA analysis and generate sample statistical graphs, and part of the results are shown in the checkpoint file.  
+      2. We also generate a webpage containing different sections and our initial interactive data visualization, such as the statistics from different cognitive tasks, and the corresponding games (allowing users to play around to better understand the study).  
+      3. We add a time axis to enable users to see results in different subjects in different metrics, such as reaction time (RTI) and Spatial Working Memory Errors.  
+      4. Besides that, we also add different sound tracks to enable users to listen and see the sonification graphs.  
+      5. We also add CSS and a color palette to improve aesthetics and clarity.
+      </li>
+      <br>
         <li><strong>What will be the most challenging of your project to design and why?</strong><br>
-        1. The most challenging part is what statistics we should use because of the speciality of our data. 2. Our data focus on cognitive behavioral tests, and it is hard to explain what the task is doing without practical simulation and visualization, so we decide to integrate sample tasks to let users play around. 3. The data itself has flaws in correlation and a single statistic is hard to find correlation, so our graphs seem ordinary and lack interaction. 4. For example, we try to find correlation in latency and accuracy, but we just get horizontal lines finally, indicating lack of correlation. 5. Moreover, the interactive tools are limited because our subjects are similar in their demographics. 6. Last but not least, the important part FNIRS contains human brain functional connectivity, and it is difficult to demonstrate the change without a brain anatomy graph. 7. However, we are still looking for methods to integrate 3D view brains and enable interactive area functions, which will be the main challenge we do next. </li>
+      1. The most challenging part is selecting appropriate statistical methods because of the specialty of our data.  
+      2. Our data focus on cognitive–behavioral tests, and it is hard to explain what each task is doing without practical simulation and visualization, so we decided to integrate sample tasks to let users interactively play around.  
+      3. The data itself has flaws in correlation, and a single summary statistic is hard to use to find meaningful relationships; consequently, our initial graphs seem ordinary and lack deeper interaction.  
+      4. For example, we attempted to find correlations between latency and accuracy, but we ultimately obtained nearly horizontal lines, indicating little to no direct correlation.  
+      5. Moreover, the interactive tools are limited because our subjects are homogeneous in demographics, reducing variability.  
+      6. Last but not least, the critical fNIRS component involves human brain functional connectivity, and it is difficult to demonstrate these changes without a 3D brain anatomy graph.  
+      7. However, we are still exploring methods to integrate 3D brain views and enable interactive region-specific functions, which will be our main challenge moving forward.</li>
+      <br>  
+      <li><strong>Discussion and Next Steps</strong><br>
+      <p>
+      At this stage, our initial findings confirm that even a small, homogeneous sample can reveal measurable effects of sleep deprivation on reaction times and error rates across cognitive tasks. In particular, fNIRS‐derived hemodynamic signals demonstrate consistent increases in prefrontal activation after 24 hours without sleep, suggesting that the brain exerts additional effort to maintain performance. We have found that embedding interactive elements—such as the Cognitive Reaction Game and the sonification feature—helps users experience fatigue’s impact firsthand, making the data more compelling than static charts alone.
       </p>
-    </section>
+      <p>
+      Our design insights indicate that users should be able to toggle seamlessly between “baseline” and “deprived” states. The time‐axis slider and dropdown controls we introduced are a strong foundation, but we plan to enhance them further by adding annotations that explain sudden shifts in metrics. Similarly, the sonification approach requires careful calibration: we will refine pitch and volume changes so they correspond more directly with ΔHbO magnitudes, allowing users to instantly link auditory cues to cognitive load. Although our current CSS and color palette improve clarity, we will standardize color encoding—using red exclusively for declines and green for improvements—across all charts and controls to avoid any potential confusion.
+      </p>
+      <p>
+      Looking ahead, we plan to expand our participant pool to include females and older adults, which will allow us to examine whether demographic differences produce distinct fatigue profiles and enhance the generalizability of our findings. We also intend to develop a “fatigue risk index” that combines behavioral metrics with fNIRS signals into a single composite score, enabling users to quickly assess overall cognitive strain. Additionally, we will refine interactivity by introducing tooltips that display statistical results (for example, p-values and effect sizes) when users hover over summary charts.
+      </p>
+      <p>
+      In conclusion, we have successfully integrated raw data processing, interactive visualizations, and preliminary statistical summaries. The most significant challenges ahead involve selecting robust statistical methods suitable for a small, homogeneous sample and upgrading our fNIRS representations from two-dimensional heatmaps to spatially intuitive three-dimensional brain views. By continuing to refine our visual, auditory, and statistical components, our ultimate goal is to deliver a polished, fully interactive web dashboard that not only presents scientifically accurate findings but also immerses users in the lived experience of sleep deprivation—underscoring that sleep is not merely restorative rest but a critical foundation for optimal brain function.
+      </li>
+      </p>
+      </section>
 
     <section id="data">
       <h3>Data Sources</h3>
