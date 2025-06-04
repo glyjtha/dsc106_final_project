@@ -1,152 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
-<meta charset="utf-8" />
-<head>
-  <title>CANTAB – Sleep‑Deprivation Interactive</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <style>
-    body{font-family:sans-serif;margin:0;padding:16px;}
-    label,select{font-size:14px;}
-    .slider-row{display:flex;align-items:center;gap:8px;width:800px;margin:8px 0;}
-    .slider-row span{font-size:12px;color:#555;white-space:nowrap;}
-    #tSlider{flex:1;accent-color:#4C9AFF;}
-    #meanDisplay{font-weight:600;margin:4px 0 10px;}
-    .axis-title{font-size:12px;fill:#333;}
-  </style>
-</head>
-<body>
-  <label>Select Metric:
-    <select id="metricSelect">
-      <option value="RTI">Reaction Time (RTI)</option>
-      <option value="PAL">Paired-Associate Learning Errors (PAL)</option>
-      <option value="SWM">Spatial Working Memory Errors (SWM)</option>
-      <option value="RVP">Sustained Attention Sensitivity (RVP)</option>
-    </select>
-  </label>
+<meta charset="utf-8">
+<body style="font-family: sans-serif; background: white;">
 
-  <div class="slider-row">
+  <div style="display: flex; align-items: center; width: 80%; margin: 20px auto; gap: 10px; font-size: 12px;">
     <span>Before sleep deprivation</span>
-    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0">
+    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0" style="flex: 1; accent-color: #4C9AFF;">
     <span>After sleep deprivation</span>
   </div>
+  
 
-  <p id="meanDisplay"></p>
+  <div style="position: relative; width: 1000px; margin: auto;">
+    <svg id="chart" width="1000" height="420"></svg>
 
-  <svg id="chart" width="800" height="450"></svg>
+    <img src="eye-open.png" id="eyeOpen"
+         style="position: absolute; top: 160px; left: 470px; width: 60px; opacity: 1;">
+    <img src="yawn.png" id="yawn"
+         style="position: absolute; top: 160px; left: 470px; width: 60px; opacity: 0;">
+  </div>
 
-<script>
-d3.csv("SD_CANTAB_DB_public.csv", d3.autoType).then(rawData => {
-  // --- Data wrangling ------------------------------------------------------
-  const clean      = rawData.filter(d=>d["Subject ID"]);
-  const beforeData = clean.filter(d=>d["Subject ID"].endsWith("_before"));
-  const afterData  = clean.filter(d=>d["Subject ID"].endsWith("_after"));
-  const ids        = beforeData.map(d=>d["Subject ID"].replace("_before",""));
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+  d3.csv("SD_CANTAB_DB_public.csv", d3.autoType).then(rawData => {
+    const clean      = rawData.filter(d => d["Subject ID"]);
+    const beforeData = clean.filter(d => d["Subject ID"].endsWith("_before"));
+    const afterData  = clean.filter(d => d["Subject ID"].endsWith("_after"));
+    const ids        = beforeData.map(d => d["Subject ID"].replace("_before", ""));
 
-  // mapping from metric to accessor + units + label
-  const metricMeta = {
-    RTI:{get:d=>+d["RTIFMRT"], unit:"ms",  label:"Reaction Time"},
-    PAL:{get:d=>+d["PALTE"],   unit:"errors", label:"PAL Errors"},
-    SWM:{get:d=>+d["SWMS"],    unit:"errors", label:"SWM Errors"},
-    RVP:{get:d=>+d["RVPA"],    unit:"A′",   label:"RVP Sensitivity"}
-  };
+    const metricMap = {
+      RTI: d => +d["RTIFMRT"],
+      PAL: d => +d["PALTE"],
+      SWM: d => +d["SWMS"],
+      RVP: d => +d["RVPA"]
+    };
 
-  // --- SVG setup -----------------------------------------------------------
-  const svg   = d3.select("#chart"),
-        W     = +svg.attr("width"),
-        H     = +svg.attr("height"),
-        leftW = 600,
-        pad   = 45;
+    const svg = d3.select("#chart");
+    const W = +svg.attr("width"),
+          H = +svg.attr("height"),
+          pad = 40;
 
-  const gx = svg.append("g").attr("transform",`translate(0,${H-pad})`);
-  const gy = svg.append("g").attr("transform",`translate(${pad},0)`);
+    const metrics = ["RTI", "PAL", "SWM", "RVP"];
+    const plotWidth = 220;
+    const spacing = 20;
+    const fullMetricNames = {
+      RTI: "Reaction Time (RTI)",
+      PAL: "Paired-Associate Learning Errors (PAL)",
+      SWM: "Spatial Working Memory Errors (SWM)",
+      RVP: "Sustained Attention Sensitivity (RVP)"
+    };
 
-  // axis titles
-  const xLabel = svg.append("text")
-      .attr("class","axis-title")
-      .attr("x", leftW/2)
-      .attr("y", H-10)
-      .attr("text-anchor","middle")
-      .text("Subject ID");
+    const plots = metrics.map((metric, i) => {
+      const x0 = i * (plotWidth + spacing) + pad;
+      const g = svg.append("g").attr("transform", `translate(${x0},0)`);
 
-  const yLabel = svg.append("text")
-      .attr("class","axis-title")
-      .attr("transform","rotate(-90)")
-      .attr("x", -H/2)
-      .attr("y", 18)
-      .attr("text-anchor","middle");
+      // 添加 metric title
+      g.append("text")
+        .attr("x", plotWidth / 2)
+        .attr("y", 24)
+        .attr("text-anchor", "middle")
+        .style("font-size", "13px")
+        .style("fill", "#333")
+        .text(fullMetricNames[metric]);
 
-  const circles = svg.append("g").attr("class","pts")
-        .selectAll("circle").data(beforeData)
+
+      const gx = g.append("g").attr("transform", `translate(0,${H - pad})`);
+      const gy = g.append("g").attr("transform", `translate(${pad},0)`);
+
+      const pts = g.append("g").attr("class", "pts").selectAll("circle")
+        .data(ids)
         .join("circle")
-          .attr("r",6)
-          .attr("fill","#4C9AFF");
+          .attr("r", 5)
+          .attr("fill", "#6c5ce7")
+          .attr("stroke", "white")
+          .attr("stroke-width", 1.2)
+          .attr("opacity", 0.9);
 
-  // right‑side animation (unchanged)
-  const animX = leftW + 20, animY = pad;
-  const anim = svg.append("g")
-      .attr("transform",`translate(${animX},${animY})`);
+      return { metric, gx, gy, pts };
+    });
 
-  anim.append("image")
-      .attr("class","open")
-      .attr("href","eye-open.png")
-      .attr("width",200).attr("height",250)
-      .attr("opacity",1)
-      .attr("preserveAspectRatio","xMidYMid slice");
+    function update(t) {
+    const betterIfHigher = {
+      RTI: false,
+      PAL: false,
+      SWM: false,
+      RVP: true
+    };
 
-  anim.append("image")
-      .attr("class","yawn")
-      .attr("href","yawn.png")
-      .attr("width",200).attr("height",250)
-      .attr("opacity",0)
-      .attr("preserveAspectRatio","xMidYMid slice");
+    plots.forEach(({ metric, gx, gy, pts }) => {
+      const getVal = metricMap[metric];
+      const allVals = beforeData.map(getVal).concat(afterData.map(getVal));
 
-  // -------------------------------------------------------------------------
-  let metricKey = "RTI", t = 0;
-  update();
+      const xScale = d3.scalePoint()
+        .domain(ids)
+        .range([pad, plotWidth - pad]);
 
-  d3.select("#metricSelect").on("change", function(){ metricKey = this.value; update();});
-  d3.select("#tSlider").on("input", function(){ t = +this.value; update();});
-
-  function update(){
-    const {get, unit, label} = metricMeta[metricKey];
-
-    // mean Δ (post – pre)
-    const meanDelta = d3.mean(beforeData, (d,i)=> get(afterData[i]) - get(d));
-    d3.select("#meanDisplay")
-      .text(`Mean change (post – pre) in ${label}: ${meanDelta.toFixed(2)} ${unit}`);
-
-    // scales
-    const allVals = beforeData.map(get).concat(afterData.map(get));
-    const xScale = d3.scalePoint(ids, [pad, leftW-pad]);
-    const yScale = d3.scaleLinear()
+      const yScale = d3.scaleLinear()
         .domain(d3.extent(allVals)).nice()
-        .range([H-pad, pad]);
+        .range([H - pad, pad + 20]);
 
-    // axis draw
-    gx.call(d3.axisBottom(xScale).tickSize(0))
-      .selectAll("text")
-        .attr("transform","rotate(45)")
-        .style("text-anchor","start");
-    gy.call(d3.axisLeft(yScale));
+      gx.call(d3.axisBottom(xScale)
+            .tickSize(0)
+            .tickFormat(d => d))
+        .selectAll("text")
+          .attr("transform", "rotate(-65)")
+          .style("text-anchor", "end")
+          .style("font-size", "9px");
 
-    // axis title update
-    yLabel.text(`${label} (${unit})`);
+      gy.call(d3.axisLeft(yScale).ticks(4));
 
-    // point interpolation
-    circles.data(beforeData.map((d,i)=>{
-      const v0 = get(d), v1 = get(afterData[i]);
-      return {id: ids[i], val: v0 + (v1 - v0)*t};
-    }))
-    .join("circle")
-      .transition().duration(50)
-        .attr("cx", d=> xScale(d.id))
-        .attr("cy", d=> yScale(d.val));
+      // Interpolate color: from base blue to red or green
+      const baseColor = d3.color("#6c5ce7"); // original blue
 
-    // eye‑open ↔ yawn opacity
-    anim.select("image.open").attr("opacity", 1 - t);
-    anim.select("image.yawn").attr("opacity", t);
+      pts.data(beforeData.map((d, i) => {
+        const v0 = getVal(d);
+        const v1 = getVal(afterData[i]);
+        const isImproving = betterIfHigher[metric] ? v1 > v0 : v1 < v0;
+        const targetColor = d3.color(isImproving ? "#00b894" : "#d63031"); // green or red
+        const interpColor = d3.interpolateRgb(baseColor, targetColor)(t);
+
+        return {
+          id: ids[i],
+          val: v0 + (v1 - v0) * t,
+          color: interpColor
+        };
+      }))
+      .join("circle")
+        .transition().duration(60)
+          .attr("cx", d => xScale(d.id))
+          .attr("cy", d => yScale(d.val))
+          .attr("fill", d => d.color);
+    });
+
+    // emoji opacity
+    d3.select("#eyeOpen").style("opacity", 1 - t);
+    d3.select("#yawn").style("opacity", t);
   }
-});
-</script>
+
+
+    update(0);
+
+    d3.select("#tSlider").on("input", function () {
+      const t = +this.value;
+      update(t);
+    });
+  });
+  </script>
 </body>
-</html>

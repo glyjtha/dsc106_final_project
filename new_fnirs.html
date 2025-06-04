@@ -4,42 +4,48 @@
   <meta charset="utf-8" />
   <title>Interactive fNIRS Heatmap – Sleep‑Deprivation Study</title>
   <style>
-    /* —— Basic page layout —— */
     :root{color-scheme:light dark}
-    body{margin:0;display:flex;flex-direction:column;align-items:center;font-family:system-ui,Arial,sans-serif;padding:1rem;gap:0.75rem}
+    body{margin:0;padding:1rem;font-family:system-ui,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;gap:0.75rem}
     h2{margin:0;font-size:clamp(1.3rem,3vw,2rem);text-align:center}
-    #controls{display:flex;gap:1.25rem;flex-wrap:wrap;font-size:0.9rem}
+    #controls{display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;font-size:0.9rem}
     #chart{box-shadow:0 2px 10px rgba(0,0,0,0.12);border-radius:10px;}
-    /* —— Legend —— */
+    /* legend */
     .legend text{font-size:10px;dominant-baseline:middle}
     .legend-title{font-size:11px;font-weight:600;dominant-baseline:hanging}
-    /* —— Tooltip —— */
+    /* tooltip */
     .tooltip-bg{fill:#fff;stroke:#333;stroke-width:0.6;opacity:0.9}
     .tooltip-text{font-size:11px;pointer-events:none}
+    /* slider */
+    input[type=range]{width:180px;margin:0 0.4rem;}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 </head>
 <body>
 
-<h2>Frontal‑Lobe Channel Intensity (First 137 Channels)</h2>
+<h2>Frontal‑Lobe Channel Intensity (First 137 Channels)</h2>
+
 <div id="controls">
-  <label><input type="radio" name="dataset" value="pre" checked> Before Sleep Deprivation</label>
-  <label><input type="radio" name="dataset" value="post"> After Sleep Deprivation</label>
+  <label><input type="radio" name="dataset" value="pre"  checked> Pre‑SD</label>
+  <label><input type="radio" name="dataset" value="post"> Post‑SD</label>
+  <label><input type="radio" name="dataset" value="delta"> Δ (Post‑Pre)</label>
+  <span style="border-left:1px solid currentColor;height:0.9rem"></span>
+  <label>Subject: <input type="range" id="subjRange" min="1" max="10" step="1" value="1"></label>
+  <span id="subjLabel">1</span>
 </div>
 
 <div id="chart"></div>
 
 <script>
 /* ----------------------------------------------------------------------- */
-/*  Config                                                                 */
+/*  Config                                                                  */
 /* ----------------------------------------------------------------------- */
-const SIZE  = 650;                         // SVG side length
-const M     = {top:20,right:55,bottom:25,left:25};
-const DOT_R = 7;                           // channel marker radius
-const LEG_W = 24, LEG_H = 200;             // legend size
+const SIZE  = 650;
+const M     = {top:20,right:60,bottom:25,left:25};
+const DOT_R = 7;
+const LEG_W = 26, LEG_H = 220;
 
 /* ----------------------------------------------------------------------- */
-/*  SVG root & defs                                                        */
+/*  SVG root & defs                                                         */
 /* ----------------------------------------------------------------------- */
 const svg = d3.select('#chart')
   .append('svg')
@@ -48,23 +54,22 @@ const svg = d3.select('#chart')
   .attr('height',SIZE);
 
 const defs = svg.append('defs');
-
-function addGradient(id, scale){
+function makeGradient(id, scale){
   const g = defs.append('linearGradient')
     .attr('id',id)
     .attr('x1','0%').attr('y1','100%')
     .attr('x2','0%').attr('y2','0%');
-  const steps = 60, [min,max] = scale.domain();
+  const steps = 60; const [min,max] = scale.domain();
   for(let i=0;i<=steps;i++){
     const t = i/steps;
     g.append('stop')
-     .attr('offset', (t*100)+'%')
-     .attr('stop-color', scale(min + (max-min)*t));
+     .attr('offset',(t*100)+'%')
+     .attr('stop-color',scale(min+(max-min)*t));
   }
 }
 
 /* ----------------------------------------------------------------------- */
-/*  Tooltip                                                                */
+/*  Tooltip                                                                 */
 /* ----------------------------------------------------------------------- */
 const tooltip = svg.append('g').style('display','none');
 tooltip.append('rect')
@@ -72,101 +77,168 @@ tooltip.append('rect')
   .attr('x',-45).attr('y',-15).attr('width',90).attr('height',22).attr('rx',4);
 const tooltipTxt = tooltip.append('text')
   .attr('class','tooltip-text')
-  .attr('text-anchor','middle')
-  .attr('y',2);
+  .attr('text-anchor','middle').attr('y',2);
 
 /* ----------------------------------------------------------------------- */
-/*  Helper – average intensity per channel                                 */
+/*  Data helpers                                                            */
 /* ----------------------------------------------------------------------- */
-function avgByChannel(rows){
-  const acc = new Map();
-  rows.forEach(d=>{
-    const ch = +d.channel;
-    const v  = +d.mean_intensity;
-    if(!acc.has(ch)) acc.set(ch,{s:0,c:0});
-    const o = acc.get(ch); o.s += v; o.c += 1;
+function tidy(rows){
+  // infer key names (subject / channel / intensity) regardless of header case
+  const keys = Object.keys(rows[0]);
+  const subjKey = keys.find(k=>/subject/i.test(k));
+  const chanKey = keys.find(k=>/chan/i.test(k));
+  const intKey  = keys.find(k=>/intensity|mean|abs/i.test(k));
+  const out = new Map();
+  rows.forEach(r=>{
+    const subj = +r[subjKey];
+    const chan = +r[chanKey];
+    const val  = +r[intKey];
+    if(!out.has(subj)) out.set(subj, Array(137).fill(NaN));
+    if(chan<=137) out.get(subj)[chan-1] = val;
   });
-  const arr = [];
-  acc.forEach((o,ch)=>{ arr[ch-1] = o.s/o.c; });
-  return arr.slice(0,137); // ensure first 137 channels
+  return out; // Map<subj, array[137]>
 }
 
 /* ----------------------------------------------------------------------- */
-/*  Data loading                                                           */
+/*  Data loading                                                            */
 /* ----------------------------------------------------------------------- */
 Promise.all([
   d3.csv('Probe_location.csv', d3.autoType),
   d3.csv('fnirs_pre_summary.csv',  d3.autoType),
   d3.csv('fnirs_post_summary.csv', d3.autoType)
-]).then(([rawLoc, preAll, postAll])=>{
-
-  /* —— normalise probe coordinate headers (file has no header) —— */
+]).then(([rawLoc, preRows, postRows])=>{
+  // probe coordinates (assume first 2 columns are x,y)
   const loc = rawLoc.slice(0,137).map(d=>{
-    const keys = Object.keys(d);
-    return {x:+d[keys[0]], y:+d[keys[1]]};
+    const k = Object.keys(d);
+    return {x:+d[k[0]], y:+d[k[1]]};
   });
 
-  /* —— prepare intensity arrays —— */
-  const preVals  = avgByChannel(preAll);
-  const postVals = avgByChannel(postAll);
+  // intensities per subject
+  const preMap  = tidy(preRows);
+  const postMap = tidy(postRows);
+  const subjects = Array.from(new Set([...preMap.keys(), ...postMap.keys()]))
+                       .sort((a,b)=>a-b)
+                       .slice(0,10); // keep first 10
+  // adjust slider max if different
+  const subjRange = document.getElementById('subjRange');
+  subjRange.max = subjects.length;
+
+  // build delta map
+  const deltaMap = new Map();
+  subjects.forEach(s=>{
+    const arr = Array(137).fill(NaN);
+    const pre = preMap.get(s)||[];
+    const post= postMap.get(s)||[];
+    for(let i=0;i<137;i++){
+      const a = post[i], b = pre[i];
+      if(!isNaN(a) && !isNaN(b)) arr[i] = a-b;
+    }
+    deltaMap.set(s, arr);
+  });
 
   /* —— scales —— */
   const xExtent = d3.extent(loc,d=>d.x);
   const yExtent = d3.extent(loc,d=>d.y);
   const x = d3.scaleLinear().domain(xExtent).range([M.left, SIZE-M.right-LEG_W-8]);
-  const y = d3.scaleLinear().domain(yExtent).range([SIZE-M.bottom, M.top]); // invert y
-  const color = d3.scaleSequential()
-                 .domain([d3.min(preVals.concat(postVals)), d3.max(preVals.concat(postVals))])
-                 .interpolator(d3.interpolateViridis);
-  addGradient('grad',color);
+  const y = d3.scaleLinear().domain(yExtent).range([SIZE-M.bottom, M.top]);
 
-  /* —— legend —— */
-  svg.append('rect')
-     .attr('x', SIZE - M.right - LEG_W)
-     .attr('y', M.top)
-     .attr('width', LEG_W)
-     .attr('height', LEG_H)
-     .style('fill','url(#grad)');
-  const legendScale = d3.scaleLinear().domain(color.domain()).range([LEG_H,0]);
-  svg.append('g')
-     .attr('class','legend')
-     .attr('transform',`translate(${SIZE-M.right},${M.top})`)
-     .call(d3.axisRight(legendScale).ticks(6));
-  svg.append('text')
-     .attr('class','legend-title')
-     .attr('x', SIZE-M.right-LEG_W/2)
-     .attr('y', M.top+LEG_H+4)
-     .attr('text-anchor','middle')
-     .text('Intensity');
+  // sequential scale for raw intensities
+  const intVals = subjects.flatMap(s=>{
+    const a = (preMap.get(s)||[]).concat(postMap.get(s)||[]);
+    return a.filter(v=>!isNaN(v));
+  });
+  const intScale = d3.scaleSequential()
+                     .domain([d3.min(intVals), d3.max(intVals)])
+                     .interpolator(d3.interpolateViridis);
+  // diverging scale for delta
+  const diffVals = subjects.flatMap(s=>deltaMap.get(s).filter(v=>!isNaN(v)));
+  const diffMax  = Math.max(Math.abs(d3.min(diffVals)), Math.abs(d3.max(diffVals)));
+  const diffScale = d3.scaleDiverging(d3.interpolateRdBu)
+                      .domain([ diffMax, 0, -diffMax ]);
+
+  makeGradient('gradInt', intScale);
+  makeGradient('gradDiff', diffScale);
+
+  /* —— legend group —— */
+  const legendG = svg.append('g').attr('class','legend');
+  // background rect
+  legendG.append('rect')
+          .attr('x', SIZE-M.right-LEG_W)
+          .attr('y', M.top)
+          .attr('width', LEG_W)
+          .attr('height', LEG_H)
+          .attr('id','legendRect');
+  // axis group
+  const axisG = legendG.append('g')
+        .attr('transform',`translate(${SIZE-M.right},${M.top})`);
+  // title
+  const legendTitle = legendG.append('text')
+        .attr('class','legend-title')
+        .attr('x', SIZE-M.right-LEG_W/2)
+        .attr('y', M.top+LEG_H+4)
+        .attr('text-anchor','middle');
+
+  function updateLegend(type){
+    const rect = legendG.select('#legendRect');
+    if(type==='delta'){
+      rect.style('fill','url(#gradDiff)');
+      const scale = d3.scaleLinear().domain(diffScale.domain()).range([LEG_H,0]);
+      axisG.call(d3.axisRight(scale).ticks(6));
+      legendTitle.text('Δ Intensity');
+    }else{
+      rect.style('fill','url(#gradInt)');
+      const scale = d3.scaleLinear().domain(intScale.domain()).range([LEG_H,0]);
+      axisG.call(d3.axisRight(scale).ticks(6));
+      legendTitle.text('Intensity');
+    }
+  }
 
   /* —— draw channels —— */
-  function draw(which){
-    const vals = which==='pre'?preVals:postVals;
-    const data = loc.map((p,i)=>({...p,intensity:vals[i],idx:i+1}));
-    const sel = svg.selectAll('.dot').data(data, d=>d.idx);
+  function draw(dataset, subjIdx){
+    const subj = subjects[subjIdx];
+    const values = dataset==='pre'  ? preMap.get(subj)
+                 : dataset==='post' ? postMap.get(subj)
+                 : deltaMap.get(subj);
+    const scale  = dataset==='delta' ? diffScale : intScale;
+
+    const data = loc.map((p,i)=>({...p,intensity:values?values[i]:NaN,idx:i+1}));
+    const sel = svg.selectAll('.dot').data(data,d=>d.idx);
     sel.join(
       enter => enter.append('circle')
-                      .attr('class','dot')
-                      .attr('r',DOT_R)
-                      .attr('cx',d=>x(d.x))
-                      .attr('cy',d=>y(d.y))
-                      .attr('fill',d=>color(d.intensity))
-                      .on('mouseover',(ev,d)=>{
-                        tooltip.style('display',null)
-                               .attr('transform',`translate(${x(d.x)},${y(d.y)-12})`);
-                        tooltipTxt.text(`Ch ${d.idx}: ${d.intensity.toFixed(3)}`);
-                      })
-                      .on('mouseout',()=>tooltip.style('display','none')),
-      update => update.transition().duration(300)
-                      .attr('fill',d=>color(d.intensity))
+                     .attr('class','dot')
+                     .attr('r',DOT_R)
+                     .attr('cx',d=>x(d.x))
+                     .attr('cy',d=>y(d.y))
+                     .attr('fill',d=>isNaN(d.intensity)?'#ccc':scale(d.intensity))
+                     .on('mouseover',(ev,d)=>{
+                       tooltip.style('display',null)
+                              .attr('transform',`translate(${x(d.x)},${y(d.y)-12})`);
+                       const txt = isNaN(d.intensity) ? 'N/A' : d.intensity.toFixed(3);
+                       tooltipTxt.text(`Ch ${d.idx}: ${txt}`);
+                     })
+                     .on('mouseout',()=>tooltip.style('display','none')),
+      update => update.transition().duration(250)
+                     .attr('fill',d=>isNaN(d.intensity)?'#ccc':scale(d.intensity))
     );
+    updateLegend(dataset);
   }
-  draw('pre');
 
-  /* —— radio controls —— */
+  /* —— initial state —— */
+  const state = {dataset:'pre', subjIdx:0};
+  draw(state.dataset,state.subjIdx);
+
+  /* —— UI events —— */
   d3.selectAll('input[name=dataset]').on('change',function(){
-    draw(this.value);
+    state.dataset = this.value;
+    draw(state.dataset,state.subjIdx);
   });
+  subjRange.addEventListener('input', e=>{
+    state.subjIdx = +e.target.value-1;
+    document.getElementById('subjLabel').textContent = subjects[state.subjIdx];
+    draw(state.dataset,state.subjIdx);
+  });
+  // set label text
+  document.getElementById('subjLabel').textContent = subjects[state.subjIdx];
 });
 </script>
 </body>
