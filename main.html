@@ -89,7 +89,13 @@
     html { scroll-behavior: smooth; }
   </style>
 </head>
-<body>
+  <body style="opacity: 0; transition: opacity 1.2s ease;">
+    <script>
+      window.onload = () => {
+        document.body.style.opacity = 1;
+      };
+    </script>
+    
 
   <nav>
     <h1>Sleep SD</h1>
