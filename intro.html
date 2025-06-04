@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sleepy SD Intro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: #1a1f3b url('star.png') repeat top center;
+      color: #e0e6f2;
+      font-family: 'Quicksand', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .stars::after {
+      content: '';
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      background-image: radial-gradient(white 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: twinkle 10s linear infinite;
+      opacity: 0.08;
+      z-index: 0;
+    }
+
+    @keyframes twinkle {
+      from { background-position: 0 0; }
+      to { background-position: 40px 40px; }
+    }
+
+    .intro-container {
+      z-index: 1;
+      max-width: 90%;
+    }
+
+    .intro-text {
+      font-size: 2.4em;
+      padding: 0 20px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.6s ease-out;
+    }
+
+    .intro-text.show {
+      opacity: 1;
+      transform: translateY(0);
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 6px #6c5ce7; }
+      to { text-shadow: 0 0 20px #a29bfe; }
+    }
+
+    .hint {
+      font-size: 1em;
+      color: #999;
+      margin-top: 20px;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body class="stars">
+  <div class="intro-container">
+    <div class="intro-text" id="q1">Are you a night owl?</div>
+    <div class="intro-text" id="q2">Have you ever gone through lack of sleep?</div>
+    <div class="intro-text" id="q3">Ever wondered what a sleepless night really does to your brain?</div>
+    <div class="intro-text" id="q4">Let’s discover together…</div>
+    <div class="hint">Click anywhere to continue</div>
+  </div>
+
+  <script>
+    const qIds = ["q1", "q2", "q3", "q4"];
+    let i = 0;
+
+    function showNext() {
+      if (i > 0) document.getElementById(qIds[i - 1]).classList.remove("show");
+      if (i < qIds.length) {
+        document.getElementById(qIds[i]).classList.add("show");
+        i++;
+      } else {
+        // Final fade-out and redirect
+        document.body.style.transition = "opacity 1s ease";
+        document.body.style.opacity = 0;
+        setTimeout(() => window.location.href = "index.html", 1000);
+      }
+    }
+
+    // Start with first question
+    showNext();
+
+    document.body.addEventListener("click", showNext);
+  </script>
+</body>
+</html>
