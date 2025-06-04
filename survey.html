@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Sleep questions 💤</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+
+        body{
+            color:white;
+            font-family:'italic', sans-serif;
+            display: flex;
+            align-items: center;
+            height: auto;
+        }
+        #sleep-survey {
+            margin: auto;
+            padding: 30px;
+            border-radius: 15px;
+            align-items: center;
+            }
+
+        .question {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        }
+
+        .question.active {
+      display: block;
+      font-family:'Quicksand', sans-serif;
+      
+      opacity: 1;
+    }
+    .option-button {
+      display: block;
+      width: 100%;
+      background: #b0d5ed;
+      border: 1px solid white;
+      padding: 10px;
+      margin: 8px 0;
+      cursor: pointer;
+      text-align: center;
+    }
+    .option-button:hover, .option-button.selected {
+      background: #3388ff;
+      color: white;
+    }
+    .nav-buttons {
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin: 4px;
+      background: gray;
+    }
+    .dot.active {
+      background: pink;
+    }
+    #progress-dots {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    </style>
+</head>
+<body>
+    <section id="sleep-survey">
+        <h2>What is your sleep habit every day? 💤</h2>
+        <form id="sleepForm">
+            <div id="question-container"></div>
+            <div class="nav-buttons">
+                <button type="button" id="prevBtn">Back</button>
+                <button type="button" id="nextBtn">Next</button>
+                <button type="submit" id="submitBtn" style="display:none;">Submit</button>
+            </div>
+            <div id="progress-dots"></div>
+        </form>
+        <div id="thankYouMsg" style="display:none; text-align: center; margin-top: 40px; font-size: 1.1rem; font-family: 'Quicksand', sans-serif;">
+            Thank you for your response!<br>
+            Now you have a general reflect of your sleep, but do you know the effects of sleep deprivation?<br>
+            Now let's walk through some interesting experiments and see their results.<br>
+            (scroll down)
+          </div>
+          
+    </section>
+    <script>
+        const questions = [
+        {
+            label: "What time do you go to sleep every day?",
+            name: "sleep_time",
+            options: ["Before 10pm", "10-11pm", "11-1pm", "After 1pm 🦉"]
+        },
+        {
+            label: "How long does it take you to fall asleep?",
+            name: "fall_time",
+            options: ["Right away", "Less than 10min", "10-20 min", "More than 20 min"]
+        },
+        {
+            label: "How long do you sleep every night?",
+            name: "sleep_length",
+            options: ["<=5 hrs", "5-7 hrs", ">=7 hrs", "No I don't sleep 😏"]
+        },
+        {
+            label: "Do you wake in the night? How many times?",
+            name: "wake_times",
+            options: ["No I don't wake up in the night", "1 time", "2 or more times"]
+        },
+        {
+            label: "How often do you consume alcohol🍷 or caffeine☕️?",
+            name: "caffeine",
+            options: ["Never", "1 shot", "2 shots", ">2 shots"]
+        },
+        {
+            label: "Do you feel sleepy now? [1(momsleepy) ~ 10(very sleepy)]",
+            name: "sleepiness_score",
+            type: "input"
+        }
+        ];
+
+        let currentIndex = 0;
+        const container = document.getElementById("question-container");
+        const dotsContainer = document.getElementById("progress-dots");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const submitBtn = document.getElementById("submitBtn");
+        const form = document.getElementById("sleepForm");
+        const thankYouMsg = document.getElementById("thankYouMsg");
+
+        const answers = {};
+
+        function renderDots() {
+        dotsContainer.innerHTML = '';
+        questions.forEach((_, i) => {
+            const dot = document.createElement("div");
+            dot.className = "dot" + (i === currentIndex ? " active" : "");
+            dotsContainer.appendChild(dot);
+        });
+        }
+
+        function renderQuestion() {
+        const q = questions[currentIndex];
+        container.innerHTML = '';
+        const div = document.createElement("div");
+        div.className = "question active";
+        div.innerHTML = `<p>${q.label}</p>`;
+        if (q.type === "input") {
+            const input = document.createElement("input");
+            input.type = "number";
+            input.name = q.name;
+            input.placeholder = "Enter number (1–10)";
+            input.required = true;
+            div.appendChild(input);
+        } else {
+            q.options.forEach(opt => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = opt;
+            btn.className = "option-button";
+            btn.onclick = () => {
+                answers[q.name] = opt;
+                const all = container.querySelectorAll("button");
+                all.forEach(b => b.classList.remove("selected"));
+                btn.classList.add("selected");
+            };
+            div.appendChild(btn);
+            });
+        }
+        container.appendChild(div);
+        renderDots();
+
+        prevBtn.style.display = currentIndex > 0 ? "inline-block" : "none";
+        nextBtn.style.display = currentIndex < questions.length - 1 ? "inline-block" : "none";
+        submitBtn.style.display = currentIndex === questions.length - 1 ? "inline-block" : "none";
+        }
+
+        nextBtn.onclick = () => {
+        if (currentIndex < questions.length - 1) {
+            currentIndex++;
+            renderQuestion();
+        }
+        };
+
+        prevBtn.onclick = () => {
+        if (currentIndex > 0) {
+            currentIndex--;
+            renderQuestion();
+        }
+        };
+
+        form.onsubmit = (e) => {
+        e.preventDefault();
+        const lastInput = form.querySelector("input[name='sleepiness_score']");
+        if (lastInput && lastInput.value) {
+            answers["sleepiness_score"] = lastInput.value;
+        }
+        form.style.display = "none";
+        thankYouMsg.style.display = "block";
+        console.log("Submitted answers:", answers);
+        };
+
+        renderQuestion();
+    </script>
+    </body>
+    </html>
