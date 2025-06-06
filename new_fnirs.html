@@ -5,105 +5,42 @@
   <meta charset="utf-8" />
   <title>Interactive fNIRS Heatmap – Sleep-Deprivation Study</title>
 
-  <!-- ──────────────  BASIC STYLES  ────────────────────────────────────── -->
+  <!-- ──────────────  BASIC STYLES  ─────────────────────────────────── -->
   <style>
-    :root {
-      color-scheme: light dark
+    :root { color-scheme: light dark }
+
+    body{
+      margin:0;padding:1rem;
+      font-family:system-ui,Arial,sans-serif;
+      display:flex;flex-direction:column;align-items:center;gap:.8rem
     }
 
-    body {
-      margin: 0;
-      padding: 1rem;
-      font-family: system-ui, Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.8rem
-    }
+    h2{margin:0;font-size:clamp(1.4rem,3.8vw,2.4rem);text-align:center}
 
-    h2 {
-      margin: 0;
-      font-size: clamp(1.4rem, 3.8vw, 2.4rem);
-      text-align: center
-    }
+    #controls{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;font-size:.9rem}
 
-    #controls {
-      display: flex;
-      align-items: center;
-      gap: 1.2rem;
-      flex-wrap: wrap;
-      font-size: 0.9rem
-    }
+    #chart{box-shadow:0 2px 10px rgba(0,0,0,.14);border-radius:10px;margin-top:11rem}
 
-    #chart {
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
-      border-radius: 10px;
-    }
+    /* legend ---------------------------------------------------------- */
+    .legend text{font-size:10px;dominant-baseline:middle}
+    .legend-title{font-size:11px;font-weight:600;dominant-baseline:hanging}
 
-    /* legend ------------------------------------------------------------ */
-    .legend text {
-      font-size: 10px;
-      dominant-baseline: middle
-    }
+    /* tooltip --------------------------------------------------------- */
+    .tooltip-bg{fill:#fff;stroke:#333;stroke-width:.6;opacity:.9}
+    .tooltip-text{font-size:11px;pointer-events:none}
 
-    .legend-title {
-      font-size: 11px;
-      font-weight: 600;
-      dominant-baseline: hanging
-    }
+    /* slider ---------------------------------------------------------- */
+    input[type=range]{width:180px;margin:0 .4rem}
 
-    /* tooltip ----------------------------------------------------------- */
-    .tooltip-bg {
-      fill: #fff;
-      stroke: #333;
-      stroke-width: 0.6;
-      opacity: 0.90
-    }
+    /* head / ears / nose --------------------------------------------- */
+    .head-outline,.nose,.ear{stroke:#888;stroke-width:1.2;fill:none;pointer-events:none;
+      stroke-dasharray:6 4;opacity:.65}
 
-    .tooltip-text {
-      font-size: 11px;
-      pointer-events: none
-    }
+    /* orientation labels --------------------------------------------- */
+    .axis-label{fill:#aaa;font-size:11px;font-weight:600;dominant-baseline:middle;
+      pointer-events:none}
 
-    /* slider ------------------------------------------------------------ */
-    input[type=range] {
-      width: 180px;
-      margin: 0 0.4rem;
-    }
-
-    /* head / ears / nose (all dashed) ---------------------------------- */
-    .head-outline,
-    .nose,
-    .ear {
-      stroke: #888;
-      stroke-width: 1.2;
-      fill: none;
-      pointer-events: none;
-      stroke-dasharray: 6 4;
-      opacity: 0.65;
-    }
-
-    /* orientation labels ----------------------------------------------- */
-    .axis-label {
-      fill: #aaa;
-      font-size: 11px;
-      font-weight: 600;
-      dominant-baseline: middle;
-      pointer-events: none
-    }
-
-    #chart {
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.14);
-      border-radius: 10px;
-      margin-top: 11rem;
-      /* Add or increase this line */
-    }
-
-    #legend-container {
-      position: absolute;
-      top: 150px;
-      right: 5%;
-    }
+    #legend-container{position:absolute;top:150px;right:5%}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 </head>
@@ -113,15 +50,13 @@
   <h2>Sleep deprivation reshapes brain oxygen flow</h2>
 
   <div id="controls">
-    <label><input type="radio" name="dataset" value="pre" checked> Pre-SD</label>
-    <label><input type="radio" name="dataset" value="post"> Post-SD</label>
-    <label><input type="radio" name="dataset" value="delta"> Δ (Post-Pre)</label>
+    <label><input type="radio" name="dataset" value="pre"  checked> Before Sleep Deprive</label>
+    <label><input type="radio" name="dataset" value="post"> After Sleep Deprive</label>
+    <label><input type="radio" name="dataset" value="delta"> Δ (After-Before)</label>
 
-    <span style="border-left:1px solid currentColor;height:0.9rem"></span>
+    <span style="border-left:1px solid currentColor;height:.9rem"></span>
 
-    <label>Subject:
-      <input type="range" id="subjRange" min="1" max="10" step="1" value="1">
-    </label>
+    <label>Subject: <input type="range" id="subjRange" min="1" max="10" step="1" value="1"></label>
     <span id="subjLabel">1</span>
   </div>
 
@@ -131,285 +66,256 @@
   </div>
 
   <script>
-    /* ────────────────────  CONFIG  ─────────────────────────────────────── */
-    const SIZE = 680;                             // square SVG side-length
-    const M = { top: 22, right: 68, bottom: 30, left: 30 };
-    const DOT_R = 7;
-    const LEG_W = 26, LEG_H = 220;
+  /* ───────────────── CONFIG ───────────────── */
+  const SIZE = 680;
+  const M = {top:22,right:68,bottom:30,left:30};
+  const DOT_R = 7;
 
-    /* ────────────────────  SVG ROOT  ───────────────────────────────────── */
-    const svg = d3.select('#chart')
+  /* ───────────────── SVG ROOT ─────────────── */
+  const svg = d3.select('#chart')
       .append('svg')
-      .attr('viewBox', [0, 0, SIZE, SIZE])
-      .attr('width', SIZE)
-      .attr('height', SIZE);
+      .attr('viewBox',[0,0,SIZE,SIZE])
+      .attr('width',SIZE)
+      .attr('height',SIZE);
 
-    const defs = svg.append('defs');
+  const defs = svg.append('defs');
 
-    function makeGradient(id, scale) {
-      const g = defs.append('linearGradient')
-        .attr('id', id)
-        .attr('x1', '0%').attr('y1', '100%')
-        .attr('x2', '0%').attr('y2', '0%');
-      const steps = 60, [min, max] = scale.domain();
-      for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        g.append('stop')
-          .attr('offset', `${t * 100}%`)
-          .attr('stop-color', scale(min + (max - min) * t));
-      }
-    }
+  function makeGradient(id, scale, steps = 60) {
+  // (re-create if it already exists)
+  defs.select(`#${id}`).remove();
 
-    /* tooltip ------------------------------------------------------------- */
-    const tooltip = svg.append('g').style('display', 'none');
-    tooltip.append('rect')
-      .attr('class', 'tooltip-bg')
-      .attr('x', -45).attr('y', -15).attr('width', 90).attr('height', 22).attr('rx', 4);
-    const tooltipTxt = tooltip.append('text')
-      .attr('class', 'tooltip-text')
-      .attr('text-anchor', 'middle').attr('y', 2);
+  const dom = scale.domain(),
+        lo  = dom[0],
+        hi  = dom[dom.length - 1];
 
-    /* ────────────────────  DATA HELPERS  ───────────────────────────────── */
-    function tidy(rows) {
+  const g = defs.append('linearGradient')
+      .attr('id', id)
+      .attr('x1', '0%').attr('y1', '100%')   // bottom
+      .attr('x2', '0%').attr('y2',   '0%');  // top
+
+  for (let i = 0; i <= steps; i++) {
+    const t   = i / steps,
+          val = lo + (hi - lo) * t;          // full range lo → hi
+    g.append('stop')
+      .attr('offset', `${t * 100}%`)
+      .attr('stop-color', scale(val));
+  }
+}
+
+  /* tooltip */
+  const tooltip = svg.append('g').style('display','none');
+  tooltip.append('rect').attr('class','tooltip-bg')
+         .attr('x',-45).attr('y',-15).attr('width',90).attr('height',22).attr('rx',4);
+  const tooltipTxt = tooltip.append('text').attr('class','tooltip-text')
+         .attr('text-anchor','middle').attr('y',2);
+
+  /* ────────────────  LOAD DATA  ───────────── */
+  Promise.all([
+    d3.csv('Probe_location.csv',d3.autoType),
+    d3.csv('fnirs_pre_summary.csv',d3.autoType),
+    d3.csv('fnirs_post_summary.csv',d3.autoType)
+  ]).then(([rawLoc,preRows,postRows])=>{
+
+    /* helpers */
+    function tidy(rows){
       const keys = Object.keys(rows[0]);
-      const subjKey = keys.find(k => /subject/i.test(k));
-      const chanKey = keys.find(k => /chan/i.test(k));
-      const intKey = keys.find(k => /intensity|mean|abs/i.test(k));
-
-      const out = new Map();                       // Map<subject, array[137]>
-      rows.forEach(r => {
-        const subj = +r[subjKey], chan = +r[chanKey] - 1, val = +r[intKey];
-        if (!out.has(subj)) out.set(subj, Array(137).fill(NaN));
-        if (chan >= 0 && chan < 137) out.get(subj)[chan] = val;
+      const subjKey = keys.find(k=>/subject/i.test(k));
+      const chanKey = keys.find(k=>/chan/i.test(k));
+      const intKey  = keys.find(k=>/intensity|mean|abs/i.test(k));
+      const out = new Map();
+      rows.forEach(r=>{
+        const subj = +r[subjKey], chan = +r[chanKey]-1, val = +r[intKey];
+        if(!out.has(subj)) out.set(subj,Array(137).fill(NaN));
+        if(chan>=0 && chan<137) out.get(subj)[chan]=val;
       });
       return out;
     }
 
-    /* ────────────────────  LOAD CSVs  ──────────────────────────────────── */
-    Promise.all([
-      d3.csv('Probe_location.csv', d3.autoType),
-      d3.csv('fnirs_pre_summary.csv', d3.autoType),
-      d3.csv('fnirs_post_summary.csv', d3.autoType)
-    ]).then(([rawLoc, preRows, postRows]) => {
+    /* probe XY */
+    const loc = rawLoc.slice(0,137).map(d=>{
+      const k = Object.keys(d);
+      return {x:+d[k[0]], y:+d[k[1]]};
+    });
 
-      /* probe XY (take first 137) ---------------------------------------- */
-      const loc = rawLoc.slice(0, 137).map(d => {
-        const k = Object.keys(d);
-        return { x: +d[k[0]], y: +d[k[1]] };
-      });
+    const preMap  = tidy(preRows);
+    const postMap = tidy(postRows);
+    const subjects = Array.from(new Set([...preMap.keys(),...postMap.keys()]))
+                     .sort((a,b)=>a-b).slice(0,10);
 
-      /* intensity maps ---------------------------------------------------- */
-      const preMap = tidy(preRows);
-      const postMap = tidy(postRows);
-      const subjects = Array.from(new Set([...preMap.keys(), ...postMap.keys()]))
-        .sort((a, b) => a - b)
-        .slice(0, 10);
+    /* slider cap */
+    subjRange.max = subjects.length;
 
-      /* slider max may shrink if <10 subjects ---------------------------- */
-      const subjRange = document.getElementById('subjRange');
-      subjRange.max = subjects.length;
+    /* Δ map */
+    const deltaMap = new Map();
+    subjects.forEach(s=>{
+      const out = Array(137).fill(NaN),
+            a = postMap.get(s)||[],
+            b = preMap.get(s)||[];
+      for(let i=0;i<137;i++)
+        if(!isNaN(a[i]) && !isNaN(b[i])) out[i]=a[i]-b[i];
+      deltaMap.set(s,out);
+    });
 
-      /* build delta (post-pre) map --------------------------------------- */
-      const deltaMap = new Map();
-      subjects.forEach(s => {
-        const out = Array(137).fill(NaN);
-        const a = postMap.get(s) || [], b = preMap.get(s) || [];
-        for (let i = 0; i < 137; i++) if (!isNaN(a[i]) && !isNaN(b[i])) out[i] = a[i] - b[i];
-        deltaMap.set(s, out);
-      });
+    /* scales */
+    const xExtent = d3.extent(loc,d=>d.x),
+          yExtent = d3.extent(loc,d=>d.y);
+    const x = d3.scaleLinear().domain(xExtent)
+                .range([M.left,SIZE-M.right-26]);
+    const y = d3.scaleLinear().domain(yExtent)
+                .range([SIZE-M.bottom,M.top]);
 
-      /* pixel scales ------------------------------------------------------ */
-      const xExtent = d3.extent(loc, d => d.x);
-      const yExtent = d3.extent(loc, d => d.y);
-      const x = d3.scaleLinear().domain(xExtent)
-        .range([M.left, SIZE - M.right - LEG_W - 10]);
-      const y = d3.scaleLinear().domain(yExtent)
-        .range([SIZE - M.bottom, M.top]);
+    /* brain group */
+    const brainG = svg.append('g').attr('id','brainGroup');
 
-      /* GROUP that owns EVERY brain element (dots + outline) -------------- */
-      const brainG = svg.append('g').attr('id', 'brainGroup');
+    /* head geometry (unchanged) */
+    const xs = loc.map(d=>x(d.x)), ys = loc.map(d=>y(d.y));
+    const centerX=d3.mean(xs), centerY=d3.mean(ys);
+    const headR=Math.max(centerX-d3.min(xs),d3.max(xs)-centerX,
+                         centerY-d3.min(ys),d3.max(ys)-centerY)+18;
+    let earR=headR*.10;
 
-      /* compute head geometry in pixel space ----------------------------- */
-      const xs = loc.map(d => x(d.x)), ys = loc.map(d => y(d.y));
-      const centerX = d3.mean(xs), centerY = d3.mean(ys);
+    const bounds={L:M.left,R:SIZE-M.right-26,T:M.top,B:SIZE-M.bottom};
+    earR=Math.min(earR,centerX-headR-bounds.L-4,bounds.R-(centerX+headR)-4);
 
-      const headR = Math.max(
-        centerX - d3.min(xs),
-        d3.max(xs) - centerX,
-        centerY - d3.min(ys),
-        d3.max(ys) - centerY
-      ) + 18;                    // padding
-      let earR = headR * 0.10;              // ears ≈10 % of head
+    /* outline */
+    const contourG = brainG.append('g').attr('class','contour');
+    contourG.append('path').attr('class','nose')
+      .attr('d',d3.symbol().type(d3.symbolTriangle).size(320)())
+      .attr('transform',`translate(${centerX},${centerY-headR-6}) rotate(180)`);
+    contourG.selectAll('.ear').data([-1,1]).enter()
+      .append('circle').attr('class','ear')
+      .attr('cx',d=>centerX+d*(headR+earR-2))
+      .attr('cy',centerY).attr('r',earR);
 
-      /* ensure ears fit (leave 4 px padding vs SVG bounds/legend) -------- */
-      const bounds = {
-        L: M.left, R: SIZE - M.right - LEG_W,
-        T: M.top, B: SIZE - M.bottom
-      };
-      earR = Math.min(
-        earR,
-        centerX - headR - bounds.L - 4,
-        bounds.R - (centerX + headR) - 4
-      );
+    /* orientation labels */
+    brainG.append('text').attr('class','axis-label')
+      .attr('x',centerX).attr('y',centerY-headR-earR-12)
+      .attr('text-anchor','middle').text('Top');
+    brainG.append('text').attr('class','axis-label')
+      .attr('x',centerX).attr('y',centerY+headR+earR+14)
+      .attr('text-anchor','middle').text('Bottom');
+    brainG.append('text').attr('class','axis-label')
+      .attr('x',centerX-headR-earR-12).attr('y',centerY+1)
+      .attr('text-anchor','end').text('Left');
+    brainG.append('text').attr('class','axis-label')
+      .attr('x',centerX+headR+earR+12).attr('y',centerY+1)
+      .attr('text-anchor','start').text('Right');
 
-      /* draw head outline ------------------------------------------------- */
-      const contourG = brainG.append('g').attr('class', 'contour');
+    /* auto-scale */
+    const outerR=headR+earR;
+    const availX=Math.min(centerX-bounds.L,bounds.R-centerX);
+    const availY=Math.min(centerY-bounds.T,bounds.B-centerY);
+    const scaleFac=Math.min(1,(Math.min(availX,availY)-4)/outerR);
+    brainG.attr('transform',
+      `translate(${centerX},${centerY}) scale(${scaleFac}) translate(${-centerX},${-centerY})`);
 
-      // contourG.append('circle')
-      //         .attr('class','head-outline')
-      //         .attr('cx',centerX).attr('cy',centerY).attr('r',headR);
+    /* colour scales */
+    const intVals = subjects.flatMap(s=>(preMap.get(s)||[]).concat(postMap.get(s)||[]))
+                    .filter(v=>!isNaN(v));
+    const intScale = d3.scaleSequential()
+                       .domain([d3.min(intVals),d3.max(intVals)])
+                       .interpolator(d3.interpolateViridis);
 
-      contourG.append('path')                     // upside-down ▲ nose
-        .attr('class', 'nose')
-        .attr('d', d3.symbol().type(d3.symbolTriangle).size(320)())
-        .attr('transform', `translate(${centerX},${centerY - headR - 6}) rotate(180)`);
+    const diffVals = subjects.flatMap(s=>deltaMap.get(s).filter(v=>!isNaN(v)));
+    const diffMax  = Math.max(Math.abs(d3.min(diffVals)),Math.abs(d3.max(diffVals)));
+    const diffScale = d3.scaleDiverging(d3.interpolateRdBu)
+                        .domain([ -diffMax, 0, diffMax]);
 
-      contourG.selectAll('.ear').data([-1, 1]).enter()
-        .append('circle')
-        .attr('class', 'ear')
-        .attr('cx', d => centerX + d * (headR + earR - 2))
-        .attr('cy', centerY)
-        .attr('r', earR);
+    makeGradient('gradInt', intScale);
+    makeGradient('gradDiff', diffScale);
 
-      /* orientation labels ----------------------------------------------- */
-      brainG.append('text')
-        .attr('class', 'axis-label')
-        .attr('x', centerX)
-        .attr('y', centerY - headR - earR - 12)
-        .attr('text-anchor', 'middle')
-        .text('Top');
+    /* ───────────── LEGEND (dynamic) ────────── */
+    const legendSvg = d3.select('#legend-svg');
 
-      brainG.append('text')
-        .attr('class', 'axis-label')
-        .attr('x', centerX)
-        .attr('y', centerY + headR + earR + 14)
-        .attr('text-anchor', 'middle')
-        .text('Bottom');
+    const legendRect = legendSvg.append('rect')
+        .attr('id','legend-rect')
+        .attr('x',20).attr('y',20)
+        .attr('width',20).attr('height',220)
+        .attr('fill','url(#gradInt)');
 
-      brainG.append('text')
-        .attr('class', 'axis-label')
-        .attr('x', centerX - headR - earR - 12)
-        .attr('y', centerY + 1)
-        .attr('text-anchor', 'end')
-        .text('Left');
+    const legendScale = d3.scaleLinear().range([220,0]);
+    const legendAxisG = legendSvg.append('g')
+        .attr('id','legend-axis')
+        .attr('transform','translate(40,20)');
 
-      brainG.append('text')
-        .attr('class', 'axis-label')
-        .attr('x', centerX + headR + earR + 12)
-        .attr('y', centerY + 1)
-        .attr('text-anchor', 'start')
-        .text('Right');
-
-      /* auto-scale whole group so *everything* fits inside chart ---------- */
-      const outerR = headR + earR;
-      const availX = Math.min(centerX - bounds.L, bounds.R - centerX);
-      const availY = Math.min(centerY - bounds.T, bounds.B - centerY);
-      const scaleFac = Math.min(1, (Math.min(availX, availY) - 4) / outerR);
-
-      brainG.attr('transform',
-        `translate(${centerX},${centerY})
-     scale(${scaleFac})
-     translate(${-centerX},${-centerY})`);
-
-      /* -----------------------  COLOUR SCALES  -------------------------- */
-      const intVals = subjects.flatMap(s => {
-        return (preMap.get(s) || []).concat(postMap.get(s) || [])
-          .filter(v => !isNaN(v));
-      });
-      const intScale = d3.scaleSequential().domain([d3.min(intVals), d3.max(intVals)])
-        .interpolator(d3.interpolateViridis);
-
-      const diffVals = subjects.flatMap(s => deltaMap.get(s).filter(v => !isNaN(v)));
-      const diffMax = Math.max(Math.abs(d3.min(diffVals)), Math.abs(d3.max(diffVals)));
-      const diffScale = d3.scaleDiverging(d3.interpolateRdBu)
-        .domain([diffMax, 0, -diffMax]);
-
-      makeGradient('gradInt', intScale);
-      makeGradient('gradDiff', diffScale);
-
-      /* ------------------------------  LEGEND  -------------------------- */
-      const legendSvg = d3.select('#legend-svg');
-
-      // Color bar rectangle
-      legendSvg.append('rect')
-        .attr('x', 20)
-        .attr('y', 20)
-        .attr('width', 20)
-        .attr('height', 220)
-        .style('fill', 'url(#gradInt)');
-
-      // Axis
-      const legendScale = d3.scaleLinear()
-        .domain(intScale.domain())
-        .range([220, 0]);
-
-      const legendAxis = d3.axisRight(legendScale).ticks(6);
-
-      legendSvg.append('g')
-        .attr('transform', 'translate(40,20)')
-        .call(legendAxis);
-
-      // Title
-      legendSvg.append('text')
-        .attr('x', 30)
-        .attr('y', 10)
-        .attr('text-anchor', 'middle')
-        .attr('class', 'legend-title')
+    legendSvg.append('text')
+        .attr('id','legend-title')
+        .attr('x',30).attr('y',10)
+        .attr('text-anchor','middle')
+        .attr('class','legend-title')
         .text('Intensity');
 
-      /* ------------------------------  DRAW CHANNELS  ------------------- */
-      function draw(dataset, subjIdx) {
-        const subj = subjects[subjIdx];
-        const vals = dataset === 'pre' ? preMap.get(subj)
-          : dataset === 'post' ? postMap.get(subj)
-            : deltaMap.get(subj);
-        const scale = dataset === 'delta' ? diffScale : intScale;
+        function updateLegend(dataset) {
+  const isDelta = dataset === 'delta';
 
-        const data = loc.map((p, i) => ({ ...p, intensity: vals ? vals[i] : NaN, idx: i + 1 }));
-        const sel = brainG.selectAll('.dot').data(data, d => d.idx);
+  legendRect.attr('fill', isDelta ? 'url(#gradDiff)' : 'url(#gradInt)');
 
-        sel.join(
-          enter => enter.append('circle')
-            .attr('class', 'dot')
-            .attr('r', DOT_R)
-            .attr('cx', d => x(d.x))
-            .attr('cy', d => y(d.y))
-            .attr('fill', d => isNaN(d.intensity) ? '#ccc' : scale(d.intensity))
-            .on('mouseover', (ev, d) => {
-              tooltip.style('display', null)
-                .attr('transform', `translate(${x(d.x)},${y(d.y) - 12})`);
-              tooltipTxt.text(
-                isNaN(d.intensity) ? `Ch ${d.idx}: N/A`
-                  : `Ch ${d.idx}: ${d.intensity.toFixed(3)}`
-              );
-            })
-            .on('mouseout', () => tooltip.style('display', 'none')),
-          update => update.transition().duration(250)
-            .attr('fill', d => isNaN(d.intensity) ? '#ccc' : scale(d.intensity))
-        );
-      }
+  legendScale.domain(
+    isDelta ? [-diffMax, diffMax]        // bottom = −, top = +
+            : intScale.domain()
+  );
 
-      /* ------------------------------  INITIAL VIS ----------------------- */
-      const state = { dataset: 'pre', subjIdx: 0 };
-      draw(state.dataset, state.subjIdx);
+  const axis = d3.axisRight(legendScale)
+                 .ticks(6)
+                 .tickFormat(d => d.toFixed(isDelta ? 2 : 2));
 
-      /* ------------------------------  UI EVENTS ------------------------- */
-      d3.selectAll('input[name=dataset]').on('change', function () {
-        state.dataset = this.value;
-        draw(state.dataset, state.subjIdx);
-      });
+  legendAxisG.call(axis);
+  d3.select('#legend-title').text(isDelta ? 'Δ HbO' : 'Intensity');
+}
 
-      subjRange.addEventListener('input', e => {
-        state.subjIdx = +e.target.value - 1;
-        document.getElementById('subjLabel').textContent = subjects[state.subjIdx];
-        draw(state.dataset, state.subjIdx);
-      });
-      document.getElementById('subjLabel').textContent = subjects[state.subjIdx];
+    /* ───────────── DRAW CHANNELS ──────────── */
+    function draw(dataset,subjIdx){
+      const subj = subjects[subjIdx];
+      const vals = dataset==='pre'   ? preMap.get(subj)
+                 : dataset==='post'  ? postMap.get(subj)
+                 : deltaMap.get(subj);
+      const scale = dataset==='delta' ? diffScale : intScale;
+
+      const data = loc.map((p,i)=>({...p,intensity:vals?vals[i]:NaN,idx:i+1}));
+      const sel = brainG.selectAll('.dot').data(data,d=>d.idx);
+
+      sel.join(
+        enter=>enter.append('circle').attr('class','dot')
+          .attr('r',DOT_R)
+          .attr('cx',d=>x(d.x)).attr('cy',d=>y(d.y))
+          .attr('fill',d=>isNaN(d.intensity)?'#ccc':scale(d.intensity))
+          .on('mouseover',(ev,d)=>{
+            tooltip.style('display',null)
+                   .attr('transform',`translate(${x(d.x)},${y(d.y)-12})`);
+            tooltipTxt.text(isNaN(d.intensity)?`Ch ${d.idx}: N/A`
+                                             :`Ch ${d.idx}: ${d.intensity.toFixed(3)}`);
+          })
+          .on('mouseout',()=>tooltip.style('display','none')),
+        update=>update.transition().duration(250)
+          .attr('fill',d=>isNaN(d.intensity)?'#ccc':scale(d.intensity))
+      );
+
+      /* refresh legend */
+      updateLegend(dataset);
+    }
+
+    /* initial */
+    const state={dataset:'pre',subjIdx:0};
+    draw(state.dataset,state.subjIdx);
+
+    /* UI events */
+    d3.selectAll('input[name=dataset]').on('change',function(){
+      state.dataset=this.value;
+      draw(state.dataset,state.subjIdx);
     });
+
+    subjRange.addEventListener('input',e=>{
+      state.subjIdx=+e.target.value-1;
+      subjLabel.textContent=subjects[state.subjIdx];
+      draw(state.dataset,state.subjIdx);
+    });
+    subjLabel.textContent=subjects[state.subjIdx];
+  });
   </script>
 
   <img src="assets/brain_illu.svg" alt="Brain illustration"
-    style="position: fixed; top: 52%; left: 48%; transform: translate(-50%, -50%); width: 1000px; height: auto; opacity: 0.1; pointer-events: none; z-index: -1; filter: invert(1);">
+       style="position:fixed;top:52%;left:48%;transform:translate(-50%,-50%);
+              width:1000px;height:auto;opacity:.1;pointer-events:none;z-index:-1;
+              filter:invert(1);">
 </body>
-
 </html>
