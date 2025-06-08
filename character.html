@@ -1,194 +1,175 @@
 <!DOCTYPE html>
-<meta charset="utf-8">
-<body style="font-family: sans-serif; background: white;">
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>CANTAB Interactive Preview</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <style>
+    body { margin:0; font-family:sans-serif; background:#fff; color:#333;
+           display:flex; flex-direction:column; align-items:center; }
+    #slider-container {
+      display:flex; align-items:center; width:80%; margin:20px 0; font-size:12px;
+    }
+    #slider-container span { flex:0 0 auto; }
+    #tSlider {
+      flex:1; margin:0 10px; accent-color:#4C9AFF;
+    }
+    #chart-wrapper { position:relative; width:1000px; max-width:100%; height:440px; }
+    #chart { width:100%; height:100%; }
+    #eyeOpen, #yawn {
+      position:absolute; top:160px; left:50%; transform:translateX(-50%);
+      width:60px; transition:opacity .3s;
+    }
+    #roundOverlay {
+      position:fixed; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.8); color:white;
+      display:flex; align-items:center; justify-content:center;
+      font-size:2rem; opacity:0; pointer-events:none;
+      transition:opacity .3s; z-index:10;
+    }
+    #roundOverlay.show { opacity:1; pointer-events:auto; }
+  </style>
+</head>
+<body>
+  <!-- Round 2 overlay -->
+  <div id="roundOverlay">Round 2 Starting…</div>
 
-  <!-- Slider to interpolate between before / after sleep‑deprivation -->
-  <div style="display:flex;align-items:center;width:80%;margin:20px auto;gap:10px;font-size:12px;">
+  <!-- Slider -->
+  <div id="slider-container">
     <span>Before sleep deprivation</span>
-    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0" style="flex:1;accent-color:#4C9AFF;">
+    <input type="range" id="tSlider" min="0" max="1" step="0.01" value="0">
     <span>After sleep deprivation</span>
   </div>
 
-  <!-- SVG + emoji overlay  -->
-  <div style="position:relative;width:1000px;margin:auto;">
-    <svg id="chart" width="1000" height="440"></svg>
-
-    <img src="eye-open.png" id="eyeOpen"
-         style="position:absolute;top:160px;left:470px;width:60px;opacity:1;">
-    <img src="yawn.png" id="yawn"
-         style="position:absolute;top:160px;left:470px;width:60px;opacity:0;">
+  <!-- Chart + emoji -->
+  <div id="chart-wrapper">
+    <svg id="chart"></svg>
+    <img src="eye-open.png" id="eyeOpen" style="opacity:1;">
+    <img src="yawn.png"    id="yawn"    style="opacity:0;">
   </div>
 
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <script>
+  // Read preset t from localStorage
+  const presetT = parseFloat(localStorage.getItem('deprive_t')) || 0;
+
   d3.csv("SD_CANTAB_DB_public.csv", d3.autoType).then(rawData => {
-    /* ------------------------  data wrangling  ------------------------ */
-    const clean      = rawData.filter(d => d["Subject ID"]);
-    const beforeData = clean.filter(d => d["Subject ID"].endsWith("_before"));
-    const afterData  = clean.filter(d => d["Subject ID"].endsWith("_after"));
-    const ids        = beforeData.map(d => d["Subject ID"].replace("_before", ""));
-
+    // — data wrangling (unchanged) —
+    const clean      = rawData.filter(d=>d["Subject ID"]),
+          beforeData = clean.filter(d=>d["Subject ID"].endsWith("_before")),
+          afterData  = clean.filter(d=>d["Subject ID"].endsWith("_after")),
+          ids        = beforeData.map(d=>d["Subject ID"].replace("_before",""));
     const metricMap = {
-      RTI: d => +d["RTIFMRT"],                       // Reaction Time – ms
-      PAL: d => +d["PALTE"],                         // Paired Associate Learning – errors
-      SWM: d => +d["SWMS"],                          // Spatial Working Memory – errors
-      RVP: d => +d["RVPA"]                           // Sustained Attention A' – unitless
+      RTI:d=>+d["RTIFMRT"], PAL:d=>+d["PALTE"],
+      SWM:d=>+d["SWMS"],     RVP:d=>+d["RVPA"]
     };
-
-    /* ------------------------  SVG set‑up  ------------------------ */
-    const svg = d3.select("#chart");
-    const W   = +svg.attr("width"),
-          H   = +svg.attr("height"),
+    const svg = d3.select("#chart"),
+          W   = +svg.attr("width")  || 1000,
+          H   = +svg.attr("height") || 440,
           pad = 40;
-
-    const metrics      = ["RTI", "PAL", "SWM", "RVP"];
-    const plotWidth    = 220;      // width of each small‑multiple panel
-    const spacing      = 20;       // horizontal spacing between panels
-
-    /* full metric names used for panel headings */
-    const fullMetricNames = {
-      RTI: "Reaction Time (RTI)",
-      PAL: "Paired‑Associate Learning Errors (PAL)",
-      SWM: "Spatial Working Memory Errors (SWM)",
-      RVP: "Sustained Attention Sensitivity (RVP)"
+    const metrics = ["RTI","PAL","SWM","RVP"],
+          plotWidth=220, spacing=20;
+    const fullNames = {
+      RTI:"Reaction Time (RTI)",
+      PAL:"Paired-Associate Learning Errors",
+      SWM:"Spatial WM Errors",
+      RVP:"Sustained Attention"
     };
-
-    /* axis labels – *with* units */
-    const yAxisLabels = {
-      RTI: "Reaction Time (ms)",
-      PAL: "Errors (count)",
-      SWM: "Errors (count)",
-      RVP: "Sensitivity (A')"
+    const yLabels = {
+      RTI:"Reaction Time (ms)",
+      PAL:"Errors",
+      SWM:"Errors",
+      RVP:"Sensitivity (A')"
     };
-
-    /* for computing whether a change is an improvement */
     const betterIfHigher = { RTI:false, PAL:false, SWM:false, RVP:true };
-
-    /* ------------------------  mean changes (Δ after‑before)  ------------------------ */
+    // mean changes
     const meanChanges = {};
-    metrics.forEach(m => {
-      const meanBefore = d3.mean(beforeData, metricMap[m]);
-      const meanAfter  = d3.mean(afterData,  metricMap[m]);
-      meanChanges[m]   = meanAfter - meanBefore;           // signed difference
+    metrics.forEach(m=>{
+      meanChanges[m] = d3.mean(afterData, metricMap[m]) - d3.mean(beforeData, metricMap[m]);
+    });
+    // build panels
+    const plots = metrics.map((metric,i)=>{
+      const x0 = i*(plotWidth+spacing)+pad,
+            g  = svg.append("g").attr("transform",`translate(${x0},0)`);
+      // title
+      g.append("text")
+       .attr("x",plotWidth/2).attr("y",20).attr("text-anchor","middle")
+       .style("font-size","13px").style("fill","#333")
+       .text(fullNames[metric]);
+      // mean Δ
+      const diff = meanChanges[metric],
+            arrow= diff>=0?"↑":"↓",
+            diffStr = `${arrow} ${Math.abs(diff).toFixed(1)}`,
+            col = (betterIfHigher[metric]? diff>0: diff<0)?"#00b894":"#d63031";
+      g.append("text")
+       .attr("x",plotWidth/2).attr("y",38).attr("text-anchor","middle")
+       .style("font-size","12px").style("fill",col)
+       .text(`Mean Δ: ${diffStr}`);
+      // axes groups
+      const gx = g.append("g").attr("transform",`translate(0,${H-pad})`),
+            gy = g.append("g").attr("transform",`translate(${pad},0)`);
+      // axis labels
+      g.append("text")
+       .attr("transform","rotate(-90)")
+       .attr("x",-H/2).attr("y",pad-28)
+       .style("font-size","11px").style("fill","#555")
+       .text(yLabels[metric]);
+      g.append("text")
+       .attr("x",plotWidth/2).attr("y",H-pad+34)
+       .style("font-size","11px").style("fill","#555")
+       .text("Subject ID");
+      // circles
+      const pts = g.append("g").selectAll("circle")
+                   .data(ids).join("circle")
+                   .attr("r",5).attr("stroke","white")
+                   .attr("stroke-width",1.2).attr("opacity",0.9);
+      return {metric,gx,gy,pts};
     });
 
-    /* ------------------------  build one panel per metric  ------------------------ */
-    const plots = metrics.map((metric, i) => {
-      const x0 = i * (plotWidth + spacing) + pad;          // panel offset
-      const g  = svg.append("g").attr("transform", `translate(${x0},0)`);
-
-      /* title */
-      g.append("text")
-        .attr("x", plotWidth/2)
-        .attr("y", 20)
-        .attr("text-anchor", "middle")
-        .style("font-size", "13px")
-        .style("fill", "#333")
-        .text(fullMetricNames[metric]);
-
-      /* mean change annotation (after – before) */
-      const diff  = meanChanges[metric];
-      const arrow = diff >= 0 ? "\u2191" : "\u2193";      // up / down arrow
-      const diffStr = `${arrow} ${Math.abs(diff).toFixed(1)}`;
-      const diffColor = (betterIfHigher[metric] ? diff>0 : diff<0) ? "#00b894" : "#d63031";
-
-      g.append("text")
-        .attr("x", plotWidth/2)
-        .attr("y", 38)
-        .attr("text-anchor", "middle")
-        .style("font-size", "12px")
-        .style("fill", diffColor)
-        .text(`Mean Δ: ${diffStr}`);
-
-      /* axis groups */
-      const gx = g.append("g").attr("transform", `translate(0,${H-pad})`);
-      const gy = g.append("g").attr("transform", `translate(${pad},0)`);
-
-      /* y‑axis label */
-      g.append("text")
-        .attr("class", "yAxisLabel")
-        .attr("transform", "rotate(-90)")
-        .attr("x", -H/2)
-        .attr("y", pad-28)          // pull it away from tick labels
-        .attr("text-anchor", "middle")
-        .style("font-size", "11px")
-        .style("fill", "#555")
-        .text(yAxisLabels[metric]);
-
-      /* x‑axis label */
-      g.append("text")
-        .attr("class", "xAxisLabel")
-        .attr("x", plotWidth/2)
-        .attr("y", H-pad+34)        // below ticks → avoids overlap
-        .attr("text-anchor", "middle")
-        .style("font-size", "11px")
-        .style("fill", "#555")
-        .text("Subject ID");
-
-      /* data circles */
-      const pts = g.append("g").attr("class", "pts").selectAll("circle")
-        .data(ids)
-        .join("circle")
-          .attr("r", 5)
-          .attr("fill", "#6c5ce7")
-          .attr("stroke", "white")
-          .attr("stroke-width", 1.2)
-          .attr("opacity", 0.9);
-
-      return { metric, gx, gy, pts };
-    });
-
-    /* ------------------------  draw / update function  ------------------------ */
+    // update function
     function update(t){
-      plots.forEach(({ metric, gx, gy, pts }) => {
-        const getVal  = metricMap[metric];
-        const allVals = beforeData.map(getVal).concat(afterData.map(getVal));
-
-        /* scales */
-        const xScale = d3.scalePoint()
-          .domain(ids)
-          .range([pad, plotWidth-pad]);
-
-        const yScale = d3.scaleLinear()
-          .domain(d3.extent(allVals)).nice()
-          .range([H-pad, pad+20]);
-
-        /* axes */
+      if(t>0 && !update._shown){
+        document.getElementById('roundOverlay').classList.add('show');
+        setTimeout(()=>document.getElementById('roundOverlay')
+                         .classList.remove('show'),2000);
+        update._shown = true;
+      }
+      plots.forEach(({metric,gx,gy,pts})=>{
+        const getVal = metricMap[metric],
+              allVals= beforeData.map(getVal).concat(afterData.map(getVal)),
+              xScale = d3.scalePoint().domain(ids).range([pad,plotWidth-pad]),
+              yScale = d3.scaleLinear().domain(d3.extent(allVals)).nice()
+                        .range([H-pad,pad+20]);
+        // draw axes
         gx.call(d3.axisBottom(xScale).tickSize(0))
-          .selectAll("text")
-            .attr("transform", "rotate(-65)")
-            .style("text-anchor", "end")
-            .style("font-size", "9px");
-
+          .selectAll("text").attr("transform","rotate(-65)")
+          .style("text-anchor","end").style("font-size","9px");
         gy.call(d3.axisLeft(yScale).ticks(4));
-
-        /* colour interpolation toward green / red depending on improvement */
-        const baseColor = d3.color("#6c5ce7");
-
-        pts.data(beforeData.map((d,i) => {
-              const v0 = getVal(d);
-              const v1 = getVal(afterData[i]);
-              const isImproving = betterIfHigher[metric] ? v1>v0 : v1<v0;
-              const targetColor = d3.color(isImproving ? "#00b894" : "#d63031");
-              const interpColor = d3.interpolateRgb(baseColor, targetColor)(t);
-              return { id: ids[i], val: v0 + (v1 - v0)*t, color: interpColor };
-            }))
-            .join("circle")
-              .transition().duration(60)
-              .attr("cx", d => xScale(d.id))
-              .attr("cy", d => yScale(d.val))
-              .attr("fill", d => d.color);
+        // update points
+        const base = d3.color("#6c5ce7");
+        pts.data(beforeData.map((d,i)=>{
+          const v0 = getVal(d), v1 = getVal(afterData[i]),
+                improving = betterIfHigher[metric]? v1>v0: v1<v0,
+                tgt = d3.color(improving?"#00b894":"#d63031"),
+                col = d3.interpolateRgb(base,tgt)(t);
+          return {id:ids[i], val:v0 + (v1-v0)*t, color:col};
+        }))
+        .join("circle")
+          .transition().duration(60)
+          .attr("cx",d=>xScale(d.id))
+          .attr("cy",d=>yScale(d.val))
+          .attr("fill",d=>d.color);
       });
-
-      /* swap emoji */
-      d3.select("#eyeOpen").style("opacity", 1-t);
-      d3.select("#yawn").style("opacity",  t);
+      d3.select("#eyeOpen").style("opacity",1-t);
+      d3.select("#yawn")   .style("opacity",    t);
     }
 
-    /* initial draw + slider listener */
-    update(0);
-    d3.select("#tSlider").on("input", function(){ update(+this.value); });
+    // preset slider and initial draw
+    const slider = document.getElementById('tSlider');
+    slider.value = presetT;
+    slider.addEventListener('input', _=> update(+slider.value));
+    update(presetT);
   });
   </script>
 </body>
-
+</html>
