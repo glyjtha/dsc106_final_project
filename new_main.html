@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sleep Deprivation Dashboard</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    /* ── Twilight Sleep Palette ───────────────────────────────────────────── */
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300;500;700&family=Montserrat:wght@400;600;700&display=swap');
+    :root {
+      --bg: #1a1f3b;           
+      --nav: #2e3153;          
+      --card: rgba(53, 56, 110, 0.8);         
+      --text: #e0e6f2;         
+      --accent: #a29bfe;       
+      --accent2: #6c5ce7;      
+      --accent3: #5d55d6;
+      --shadow: rgba(0,0,0,0.4);
+      --font: 'Quicksand', sans-serif;
+      --title-font: 'Montserrat', sans-serif;
+      --transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      display: flex; 
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0d1029 0%, #1a1f3b 100%);
+      font-family: var(--font); 
+      color: var(--text);
+      overflow-x: hidden;
+      position: relative;
+    }
+    
+    /* Starry background */
+    .stars {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      pointer-events: none;
+    }
+    
+    .star {
+      position: absolute;
+      background-color: white;
+      border-radius: 50%;
+      animation: twinkle var(--duration, 4s) infinite ease-in-out;
+      opacity: var(--opacity, 0.7);
+    }
+    
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
+    }
+
+    nav {
+      width: 200px; 
+      background: var(--nav);
+      padding: 20px; 
+      box-shadow: 4px 0 12px var(--shadow);
+      display: flex; 
+      flex-direction: column;
+      position: fixed;
+      height: 100vh;
+      z-index: 100;
+    }
+    nav h1 {
+      font-size: 1.8em; 
+      text-align:center;
+      color: var(--accent); 
+      margin-bottom:1em;
+      font-family: var(--title-font);
+    }
+    nav ul { list-style: none; }
+    nav li + li { margin-top: 12px; }
+    nav a {
+      text-decoration: none; 
+      color: var(--text);
+      padding: 12px 15px; 
+      border-radius: 8px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    nav a:hover, nav a.active {
+      background: var(--accent2); 
+      color:#fff; 
+      transform: translateX(5px);
+      box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+    }
+    
+    nav i {
+      width: 24px;
+      text-align: center;
+    }
+    
+    main {
+      flex:1; 
+      overflow-y: auto; 
+      padding: 30px 30px 30px 230px;
+      position: relative;
+    }
+    
+    /* Progress bar */
+    .progress-container {
+      position: fixed;
+      top: 0;
+      left: 200px;
+      width: calc(100% - 200px);
+      height: 5px;
+      background: rgba(255, 255, 255, 0.1);
+      z-index: 99;
+    }
+    
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    header { 
+      text-align:center; 
+      margin-bottom:30px;
+      padding: 40px 0;
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      background: rgba(53, 56, 110, 0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .header-content {
+      position: relative;
+      z-index: 2;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    header h2 {
+      font-size: 2.8em; 
+      color: var(--accent);
+      font-family: var(--title-font);
+      margin-bottom: 20px;
+      text-shadow: 0 2px 10px rgba(162, 155, 254, 0.3);
+    }
+    
+    header p {
+      font-size: 1.2em;
+      max-width: 700px;
+      margin: 0 auto 30px;
+      line-height: 1.6;
+      color: #cfd8e3;
+    }
+    
+    .stats-container {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+    
+    .stat-card {
+      background: rgba(108, 92, 231, 0.2);
+      border-radius: 12px;
+      padding: 20px;
+      min-width: 180px;
+      text-align: center;
+      border: 1px solid rgba(162, 155, 254, 0.3);
+      transition: var(--transition);
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-5px);
+      background: rgba(108, 92, 231, 0.3);
+    }
+    
+    .stat-value {
+      font-size: 2.5em;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 5px;
+      font-family: var(--title-font);
+    }
+    
+    .stat-label {
+      font-size: 0.9em;
+      color: #a9b4c9;
+    }
+    
+    section {
+      background: var(--card);
+      border-radius: 16px; 
+      padding: 30px;
+      box-shadow: 0 4px 20px var(--shadow);
+      margin-bottom: 40px;
+      scroll-margin-top: 100px;
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transform: translateY(30px);
+      opacity: 0;
+      transition: var(--transition);
+    }
+    
+    section.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    section h3 {
+      font-size: 1.8em; 
+      margin-bottom: 20px;
+      position: relative;
+      font-family: var(--title-font);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--accent);
+    }
+    
+    section h3 i {
+      font-size: 1.2em;
+      color: var(--accent2);
+    }
+    
+    section p { 
+      line-height:1.6; 
+      color:#cfd8e3; 
+      margin-bottom: 20px;
+      font-size: 1.1em;
+    }
+    
+    .viz {
+      margin-top: 25px;
+      border: 2px dashed var(--accent);
+      border-radius: 12px;
+      display:flex; 
+      align-items:center; 
+      justify-content:center;
+      color:#bbb; 
+      font-style:italic;
+      transition: var(--transition);
+      overflow: hidden;
+      position: relative;
+      background: rgba(26, 31, 59, 0.4);
+      min-height: 300px;
+      padding: 20px;
+    }
+    
+    .viz:hover {
+      border-color: var(--accent2);
+      box-shadow: 0 8px 25px rgba(108, 92, 231, 0.3);
+    }
+    
+    .interactive-demo {
+      display: flex;
+      gap: 30px;
+      margin: 30px 0;
+      flex-wrap: wrap;
+    }
+    
+    .demo-card {
+      flex: 1;
+      min-width: 300px;
+      background: rgba(53, 56, 110, 0.5);
+      border-radius: 16px;
+      padding: 25px;
+      border: 1px solid rgba(162, 155, 254, 0.2);
+      transition: var(--transition);
+    }
+    
+    .demo-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--accent2);
+      background: rgba(53, 56, 110, 0.7);
+    }
+    
+    .demo-card h4 {
+      font-size: 1.3em;
+      margin-bottom: 15px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .slider-container {
+      margin: 25px 0;
+    }
+    
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      color: #a9b4c9;
+    }
+    
+    .slider {
+      width: 100%;
+      height: 12px;
+      -webkit-appearance: none;
+      background: rgba(162, 155, 254, 0.2);
+      border-radius: 10px;
+      outline: none;
+    }
+    
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      background: var(--accent2);
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(108, 92, 231, 0.5);
+    }
+    
+    .graph-placeholder {
+      width: 100%;
+      height: 300px;
+      background: linear-gradient(45deg, #2e3153 0%, #1a1f3b 100%);
+      border-radius: 12px;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 15px;
+      border: 1px solid rgba(162, 155, 254, 0.2);
+    }
+    
+    .graph-placeholder i {
+      font-size: 3em;
+      color: var(--accent);
+    }
+    
+    .graph-placeholder p {
+      color: #a9b4c9;
+      font-size: 1.1em;
+    }
+    
+    .key-point {
+      margin: 20px 0;
+      padding: 20px;
+      border-left: 4px solid var(--accent2);
+      background: rgba(108, 92, 231, 0.1);
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .key-point h4 {
+      font-size: 1.2em;
+      margin-bottom: 10px;
+      color: var(--accent);
+    }
+    
+    .conclusion {
+      background: linear-gradient(135deg, var(--accent2), var(--accent3));
+      padding: 40px;
+      border-radius: 16px;
+      margin: 40px 0;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(108, 92, 231, 0.4);
+    }
+    
+    .conclusion h3 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      color: white;
+    }
+    
+    .conclusion p {
+      max-width: 800px;
+      margin: 0 auto;
+      font-size: 1.1em;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    
+    footer {
+      text-align:center; 
+      padding:30px 10px 20px;
+      font-size:0.9em; 
+      color:#888;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      margin-top: 40px;
+    }
+    
+    .back-to-top {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 50px;
+      height: 50px;
+      background: var(--accent2);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.2em;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: var(--transition);
+      box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+      z-index: 99;
+    }
+    
+    .back-to-top.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    
+    .back-to-top:hover {
+      background: var(--accent);
+      transform: translateY(-5px);
+    }
+    
+    /* D3 Chart Styles */
+    .d3-chart {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .chart-container {
+      width: 100%;
+      height: 100%;
+      position: relative;
+    }
+    
+    .chart-title {
+      text-align: center;
+      font-size: 1.2em;
+      margin-bottom: 15px;
+      color: var(--accent);
+    }
+    
+    .chart-description {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #a9b4c9;
+    }
+    
+    .axis-label {
+      font-size: 0.9em;
+      fill: #cfd8e3;
+    }
+    
+    .grid-line {
+      stroke: rgba(207, 216, 227, 0.2);
+      stroke-width: 1;
+    }
+    
+    .data-point {
+      fill: #6c5ce7;
+      stroke: #fff;
+      stroke-width: 1.5;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    
+    .data-point:hover {
+      fill: #a29bfe;
+      r: 7;
+    }
+    
+    .trend-line {
+      stroke: #ff7675;
+      stroke-width: 3;
+      stroke-dasharray: 5,5;
+    }
+    
+    .tooltip {
+      position: absolute;
+      background: rgba(26, 31, 59, 0.95);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 12px;
+      pointer-events: none;
+      font-size: 0.9em;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+    
+    .tooltip h4 {
+      margin: 0 0 8px 0;
+      color: var(--accent);
+      font-size: 1.1em;
+    }
+    
+    .tooltip p {
+      margin: 5px 0;
+      color: #cfd8e3;
+    }
+    
+    .legend {
+      font-size: 0.8em;
+      fill: #cfd8e3;
+    }
+    
+    .bar {
+      fill: #6c5ce7;
+      transition: all 0.3s ease;
+    }
+    
+    .bar:hover {
+      fill: #a29bfe;
+    }
+    
+    #fnirs .interactive-demo {
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+      /* Responsive adjustments */
+    @media (max-width: 900px) {
+      body {
+        flex-direction: column;
+      }
+      
+      nav {
+        width: 100%;
+        height: auto;
+        position: relative;
+        padding: 15px;
+      }
+      
+      nav ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+      
+      nav li + li {
+        margin-top: 0;
+      }
+      
+      nav a {
+        padding: 8px 12px;
+      }
+      
+      main {
+        padding: 20px;
+      }
+      
+      .progress-container {
+        left: 0;
+        width: 100%;
+      }
+      
+      .header-content {
+        padding: 0 20px;
+      }
+      
+      header h2 {
+        font-size: 2em;
+      }
+    }
+    
+    @media (max-width: 600px) {
+      .stats-container {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      .stat-card {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Starry background -->
+  <div class="stars" id="stars"></div>
+  
+  <nav>
+    <h1>Sleep SD</h1>
+    <ul>
+      <li><a href="#intro" class="active"><i class="fas fa-home"></i> Introduction</a></li>
+      <li><a href="#methods"><i class="fas fa-flask"></i> Methods</a></li>
+      <li><a href="#game"><i class="fas fa-gamepad"></i> Game</a></li>
+      <li><a href="#cantab"><i class="fas fa-brain"></i> CANTAB</a></li>
+      <li><a href="#fnirs"><i class="fas fa-wave-square"></i> fNIRS</a></li>
+      <li><a href="#writeup"><i class="fas fa-file-alt"></i> Writeup</a></li>
+      <li><a href="#data"><i class="fas fa-database"></i> Data</a></li>
+    </ul>
+  </nav>
+  
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  
+  <div class="back-to-top" id="backToTop">
+    <i class="fas fa-arrow-up"></i>
+  </div>
+
+  <main>
+    <header>
+      <div class="header-content">
+        <h2>Effect of 24-hour Sleep Deprivation</h2>
+        <p>Explore how just one night without sleep impacts cognitive function, brain activity, and decision-making capabilities through interactive visualizations and experiments</p>
+        
+        <div class="stats-container">
+          <div class="stat-card">
+            <div class="stat-value">10</div>
+            <div class="stat-label">Participants</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">24h</div>
+            <div class="stat-label">Sleep Deprivation</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">48</div>
+            <div class="stat-label">fNIRS Channels</div>
+          </div>
+        
+        </div>
+      </div>
+    </header>
+
+    <section id="intro">
+      <h3><i class="fas fa-bed"></i> Introduction</h3>
+      <p>Sleep deprivation affects nearly 1 in 3 adults. This study examines the cognitive impact of 24-hour sleep deprivation through neuroimaging and behavioral tests. Start by reflecting on your own sleep patterns:</p>
+      
+      <!-- Survey iframe remains as you had it -->
+      <div class="viz">
+        <div class="chart-container" id="survey-container">
+          <iframe
+            src="survey.html"
+            style="width: 100%; height: 600px; border: none; border-radius: 8px;"
+          ></iframe>
+        </div>
+      </div>
+    </section>
+    
+    <section id="methods">
+      <h3><i class="fas fa-microscope"></i> Methods</h3>
+      <p>We used a publicly available dataset from PhysioNet, collecting data from 10 healthy young male adults. Participants completed cognitive and neuroimaging tests twice: once well-rested, and once after staying awake for 24 hours.</p>
+      
+      <div class="viz">
+        <div class="chart-title">Study Design Timeline</div>
+        <div class="chart-container" id="methods-chart"></div>
+      </div>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-lightbulb"></i> Key Insight</h4>
+        <p>All participants underwent the same testing protocol to ensure consistency in measurements. The 24-hour sleep deprivation period was strictly monitored in a controlled laboratory environment.</p>
+      </div>
+    </section>
+    
+    <section id="game">
+      <h3><i class="fas fa-gamepad"></i> Cognitive Reaction Game</h3>
+      <p>Experience the effects of sleep deprivation firsthand. Try to hit the target as fast as possible. You'll play two rounds: one simulating a well-rested brain, and one simulating 24 hours of fatigue.</p>
+      
+      <!-- Game iframe remains as you had it -->
+      <div class="viz">
+        <div class="chart-title">Reaction Time Test</div>
+        <div class="chart-container">
+          <iframe
+            src="game.html"
+            title="Cognitive Reaction Game"
+            style="width:100%; height:1200px; border:none; border-radius:8px;"
+          ></iframe>
+        </div>
+      </div>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-exclamation-triangle"></i> Research Finding</h4>
+        <p>Participants showed an average 42% increase in reaction time after 24 hours without sleep, with some individuals showing over 100% impairment on complex tasks.</p>
+      </div>
+    </section>
+    
+    <section id="cantab">
+      <h3><i class="fas fa-brain"></i> CANTAB Cognitive Test Results</h3>
+      <p>Sleep deprivation doesn't just make you tired—it fundamentally alters cognitive performance. Explore how different cognitive functions are affected:</p>
+      
+      <!-- Character visualization iframe remains as you had it -->
+      <div class="viz">
+        <div class="chart-title">Cognitive Performance Before & After Sleep Deprivation</div>
+        <div class="chart-container">
+          <iframe
+            src="character.html"
+            title="CANTAB Interactive"
+            style="width:100%; height:550px; border:none; border-radius:8px; background-color: white;"
+          ></iframe>
+        </div>
+      </div>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-balance-scale"></i> Tips</h4>
+        <li>🔵 Dots start in blue (baseline performance).</li> 
+        As you move the slider to simulate sleep deprivation:
+        <ul style="line-height: 1.6; margin-left: 16px;">
+          <li>🟢 Dots turn green if performance improved (e.g., fewer errors, faster reaction)</li>
+          <li>🔴 Dots turn red if performance declined (e.g., slower reaction, more mistakes)</li>
+        </ul>
+      </div>
+    </section>
+    
+    <section id="fnirs">
+      <h3><i class="fas fa-wave-square"></i> fNIRS: Brain Signals in Sound and Color</h3>
+      <p>fNIRS allows us to observe how the brain compensates for fatigue by measuring changes in oxygenated blood (ΔHbO) in the frontal lobe.</p>
+      
+      <div class="interactive-demo">
+        <div class="demo-card">
+          <h4><i class="fas fa-music"></i> Sonification</h4>
+          <div class="chart-container">
+            <iframe
+              src="fnirs.html"
+              style="width:100%; height:400px; border:none; border-radius:8px";
+              title="fNIRS Sonification">
+            </iframe>
+          </div>
+        </div>
+        
+        <div class="demo-card">
+          <h4><i class="fas fa-fire"></i> Activation Heatmap</h4>
+          <div class="chart-container">
+            <iframe
+              src="new_fnirs.html"
+              style="width:100%; height:1000px; border:none; border-radius:8px";
+              title="fNIRS brain heatmap">
+            </iframe>
+          </div>
+        </div>
+      </div>
+      
+      <div class="viz" style="margin-top: 20px;">
+        <div class="chart-title">Brain Oxygenation Statistics</div>
+        <div class="chart-container">
+          <iframe
+            src="fnirs_stats.html"
+            style="width:100%; height:450px; border:none; border-radius:8px;"
+            title="fNIRS stats">
+          </iframe>
+        </div>
+      </div>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-search"></i> Discovery</h4>
+        <p>Sleep deprivation caused a increase in frontal lobe activation during cognitive tasks, suggesting the brain works harder to maintain performance when fatigued.</p>
+      </div>
+    </section>
+    
+    <section id="writeup">
+      <h3><i class="fas fa-file-medical-alt"></i> Writeup</h3>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-check-circle"></i> What we've accomplished</h4>
+        <ul style="line-height: 1.6; margin-left: 20px; margin-top: 10px;">
+          <li>Comprehensive data cleaning and exploratory analysis</li>
+          <li>Interactive dashboard with cognitive testing simulations</li>
+          <li>Sonification of brain activity patterns</li>
+          <li>Visualization of individual variability in sleep deprivation effects</li>
+          <li>Statistical analysis of cognitive performance changes</li>
+        </ul>
+      </div>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-exclamation-circle"></i> Design challenges</h4>
+        <ul style="line-height: 1.6; margin-left: 20px; margin-top: 10px;">
+          <li>Communicating complex neuroimaging data accessibly</li>
+          <li>Visualizing subtle changes in brain activation patterns</li>
+          <li>Balancing scientific accuracy with user engagement</li>
+          <li>Designing intuitive interfaces for multi-dimensional data</li>
+          <li>Creating meaningful representations of individual differences</li>
+        </ul>
+      </div>
+      
+      <div class="conclusion">
+        <h3>Conclusion</h3>
+        <p>Our research demonstrates that 24-hour sleep deprivation causes significant and measurable declines in cognitive performance, particularly in executive functions mediated by the frontal lobe. The brain compensates by increasing activation in these regions, but this compensatory effort is insufficient to maintain baseline performance levels. These findings highlight the critical importance of adequate sleep for cognitive functioning and decision-making.</p>
+      </div>
+    </section>
+    
+    <section id="data">
+      <h3><i class="fas fa-database"></i> Data Sources</h3>
+      <p>Data for this project is sourced from the <a href="https://physionet.org/" target="_blank" style="color: var(--accent); text-decoration: underline;">PhysioNet Sleep Deprivation fNIRS Dataset</a>.</p>
+      
+      <div class="key-point">
+        <h4><i class="fas fa-code-branch"></i> Repository</h4>
+        <p>Our analysis code and processing pipelines are available on GitHub: <a href="#" style="color: var(--accent);">github.com/sleep-sd-analysis</a></p>
+      </div>
+    </section>
+    
+    <footer>
+      <p>© 2025 DSC106 | Team 404FOUND</p>
+      <p>DSC 106 | University of California, San Diego</p>
+    </footer>
+  </main>
+
+  <script>
+    // Create stars for background
+    function createStars() {
+      const starsContainer = document.getElementById('stars');
+      const starCount = 150;
+      
+      for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        
+        // Random properties
+        const size = Math.random() * 3;
+        const posX = Math.random() * 100;
+        const posY = Math.random() * 100;
+        const opacity = 0.2 + Math.random() * 0.8;
+        const duration = 2 + Math.random() * 5;
+        
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${posX}%`;
+        star.style.top = `${posY}%`;
+        star.style.opacity = opacity;
+        star.style.setProperty('--duration', `${duration}s`);
+        star.style.setProperty('--opacity', opacity);
+        
+        starsContainer.appendChild(star);
+      }
+    }
+    
+    // Progress bar
+    function updateProgressBar() {
+      const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById("progressBar").style.width = scrolled + "%";
+    }
+    
+    // Back to top button
+    function handleBackToTop() {
+      const backToTop = document.getElementById('backToTop');
+      
+      window.addEventListener('scroll', () => {
+        if (window.pageYOffset > 300) {
+          backToTop.classList.add('visible');
+        } else {
+          backToTop.classList.remove('visible');
+        }
+      });
+      
+      backToTop.addEventListener('click', () => {
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      });
+    }
+    
+    // Section animations
+    function animateSections() {
+      const sections = document.querySelectorAll('section');
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+          }
+        });
+      }, {
+        threshold: 0.1
+      });
+      
+      sections.forEach(section => {
+        observer.observe(section);
+      });
+    }
+    
+    // Create a sample D3 visualization for the Methods section
+    function createMethodsChart() {
+      const container = d3.select("#methods-chart");
+      container.selectAll("*").remove();
+      const W = container.node().clientWidth,
+            H = 450,
+            L_PAD = 80,
+            R_PAD = 80;
+
+      const svg = container.append("svg")
+        .attr("width",  W)
+        .attr("height", H);
+
+      // 1) Data (hours relative to baseline at t=0)
+      const timeline = [
+        { id:"diary",    label:"Sleep Diary (7 d)",        start:-168, dur:168, color:"#6c5ce7" },
+        { id:"baseline", label:"Baseline fNIRS",           start:   0, dur:  1, color:"#00cec9" },
+        { id:"sd",       label:"24 h Sleep Deprivation",    start:   1, dur: 24, color:"#fdcb6e" },
+        { id:"rest",     label:"Post-SD fNIRS (rest)",      start:  25, dur:  1, color:"#e17055" },
+        { id:"task",     label:"Post-SD fNIRS (task)",      start:  26, dur:  1, color:"#d63031" },
+        { id:"cantab",   label:"CANTAB Tests",              start:  27, dur:  1, color:"#0984e3" },
+      ];
+
+      // 2) Piecewise scales
+      // width available
+      const totalW = W - L_PAD - R_PAD;
+      // allocate 25% of width to diary (−168→0 h), and 75% to the post-baseline window (0→28 h)
+      const leftW  = totalW * 0.25;
+      const rightW = totalW * 0.75;
+
+      const negScale = d3.scaleLinear()
+        .domain([-168, 0])
+        .range([L_PAD, L_PAD + leftW]);
+
+      const posScale = d3.scaleLinear()
+        .domain([0, 28])
+        .range([L_PAD + leftW, L_PAD + leftW + rightW]);
+
+      // unified xScale
+      function xScale(h) {
+        return h < 0 ? negScale(h) : posScale(h);
+      }
+
+      // 3) Vertical lanes
+      const laneY = {
+        diary:     80,
+        baseline: 140,
+        sd:       200,
+        rest:    260,
+        task:    320,
+        cantab:  380
+      };
+
+      // 4) Draw lanes and bars
+      svg.selectAll("rect.segment")
+        .data(timeline)
+        .join("rect")
+          .attr("class","segment")
+          .attr("x", d=> xScale(d.start))
+          .attr("y", d=> laneY[d.id] - 10)
+          .attr("width", d=> xScale(d.start + d.dur) - xScale(d.start))
+          .attr("height", 20)
+          .attr("fill", d=> d.color)
+          .attr("opacity", 0.8);
+
+      // labels under each bar
+      svg.selectAll("text.seglabel")
+        .data(timeline)
+        .join("text")
+          .attr("class","seglabel")
+          .attr("x", d=> (xScale(d.start) + xScale(d.start + d.dur))/2)
+          .attr("y", d=> laneY[d.id] + 30)
+          .attr("text-anchor","middle")
+          .style("fill","#e0e6f2")
+          .style("font-size","12px")
+          .text(d=> d.label);
+
+      // 5) Broken-axis divider line
+      svg.append("line")
+        .attr("x1", L_PAD)
+        .attr("y1", H/2)
+        .attr("x2", W - R_PAD)
+        .attr("y2", H/2)
+        .attr("stroke","#888")
+        .attr("stroke-dasharray","4,4");
+
+      // 6) Left (days) axis for diary
+      const daysScale = d3.scaleLinear()
+        .domain([-168/24, 0])
+        .range([L_PAD, L_PAD + leftW]);
+
+      svg.append("g")
+        .attr("transform", `translate(0, ${laneY.diary - 40})`)
+        .call(d3.axisBottom(daysScale)
+          .tickValues([-7, -5, -3, -1, 0])
+          .tickFormat(d=> `${d} d`))
+        .selectAll("text")
+          .style("fill","#a9b4c9");
+
+      svg.append("text")
+        .attr("x", L_PAD + leftW/2)
+        .attr("y", laneY.diary - 60)
+        .attr("text-anchor","middle")
+        .style("fill","#e0e6f2")
+        .text("Sleep Diary Period");
+
+      // 7) Right (hours) axis for 0→28 h window
+      svg.append("g")
+        .attr("transform", `translate(0, ${laneY.sd + 40})`)
+        .call(d3.axisBottom(posScale)
+          .tickValues([0, 6, 12, 18, 24, 28])
+          .tickFormat(d=> `${d} h`))
+        .selectAll("text")
+          .style("fill","#a9b4c9");
+
+      svg.append("text")
+        .attr("x", L_PAD + leftW + rightW/2)
+        .attr("y", laneY.sd + 70)
+        .attr("text-anchor","middle")
+        .style("fill","#e0e6f2")
+        .text("Baseline→CANTAB Timeline");
+
+      // 8) Legend
+      const legend = svg.append("g")
+        .attr("transform", `translate(${W - R_PAD - 180}, 50)`);
+
+      timeline.forEach((d,i) => {
+        const g = legend.append("g").attr("transform", `translate(0, ${i*20})`);
+        g.append("rect").attr("width",12).attr("height",12).attr("fill",d.color);
+        g.append("text")
+          .attr("x",18).attr("y",10)
+          .style("fill","#e0e6f2")
+          .style("font-size","12px")
+          .text(d.label);
+      });
+    }
+
+
+
+    // Initialize everything
+    document.addEventListener('DOMContentLoaded', () => {
+      // Fade in page
+      document.body.style.opacity = 1;
+      
+      // Set up components
+      createStars();
+      handleBackToTop();
+      animateSections();
+      
+      // Create sample chart for Methods section
+      createMethodsChart();
+      
+      // Update progress bar on scroll
+      window.addEventListener('scroll', updateProgressBar);
+      
+      // Navigation highlighting
+      document.querySelectorAll('nav a').forEach(a => {
+        a.addEventListener('click', () => {
+          document.querySelector('nav a.active').classList.remove('active');
+          a.classList.add('active');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
