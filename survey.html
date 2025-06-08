@@ -2,171 +2,38 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Sleep Survey Summary 💤</title>
+  <title>Sleep Survey 💤</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <style>
-    /* 使用仪表板的主色调 */
-    :root {
-      --bg: #1a1f3b;           
-      --nav: #2e3153;          
-      --card: rgba(53, 56, 110, 0.8);         
-      --text: #e0e6f2;         
-      --accent: #a29bfe;       
-      --accent2: #6c5ce7;      
-      --accent3: #5d55d6;
-      --shadow: rgba(0,0,0,0.4);
-      --font: 'Quicksand', sans-serif;
-    }
-    
-    body { 
-      margin:0; 
-      font-family: var(--font); 
-      background: var(--bg); 
-      color: var(--text);
-      display:flex; 
-      flex-direction:column; 
-      align-items:center; 
-      justify-content:center;
-      min-height:100vh; 
-      padding:20px; 
-    }
-    
-    .container { 
-      background: var(--card); 
-      padding:30px; 
-      border-radius:16px;
-      width:90%; 
-      max-width:400px; 
-      box-shadow: 0 4px 20px var(--shadow);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    
-    h2 { 
-      margin-bottom:20px; 
-      text-align:center; 
-      color: var(--accent);
-      font-size: 1.8em;
-    }
-    
-    .question { 
-      margin-bottom:20px; 
-    }
-    
-    .question p {
-      margin-bottom: 10px;
-      color: #cfd8e3;
-    }
-    
+    body { margin:0; font-family:sans-serif; background:#1a1f3b; color:#e0e6f2;
+           display:flex; flex-direction:column; align-items:center; min-height:100vh; }
+    .container { background:#35386e; padding:20px; border-radius:8px;
+                 width:90%; max-width:400px; margin-top:40px; }
+    h2 { margin-bottom:16px; text-align:center; }
+    .question { margin-bottom:12px; }
     .option-button {
-      display:block; 
-      width:100%; 
-      padding:12px; 
-      margin:8px 0;
-      border: 1px solid var(--accent); 
-      border-radius:8px; 
-      background: rgba(108, 92, 231, 0.1);
-      color: var(--text); 
-      cursor:pointer; 
-      text-align:center;
-      transition: all 0.3s ease;
+      display:block; width:100%; padding:10px; margin:4px 0;
+      border:none; border-radius:4px; background:#a29bfe;
+      color:#1a1f3b; cursor:pointer; text-align:center;
     }
-    
-    .option-button:hover {
-      background: rgba(108, 92, 231, 0.3);
-    }
-    
-    .option-button.selected { 
-      background: var(--accent2); 
-      color:#fff; 
-      box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
-    }
-    
+    .option-button.selected { background:#6c5ce7; color:#fff; }
     input[type=number] {
-      width:100%; 
-      padding:12px; 
-      margin-top:8px;
-      border: 1px solid var(--accent); 
-      border-radius:8px; 
-      font-size:1rem;
-      background: rgba(26, 31, 59, 0.5);
-      color: var(--text);
+      width:100%; padding:8px; margin-top:4px;
+      border:none; border-radius:4px; font-size:1rem;
     }
-    
-    input[type=number]:focus {
-      outline: none;
-      border-color: var(--accent2);
-      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
-    }
-    
     button[type=submit] {
-      width:100%; 
-      padding:14px; 
-      margin-top:20px;
-      background: var(--accent2); 
-      border:none; 
-      border-radius:8px;
-      color:#fff; 
-      font-size:1.1rem; 
-      cursor:pointer;
-      transition: all 0.3s ease;
+      width:100%; padding:10px; margin-top:12px;
+      background:#6c5ce7; border:none; border-radius:4px;
+      color:#fff; font-size:1rem; cursor:pointer;
     }
-    
-    button[type=submit]:hover {
-      background: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(108, 92, 231, 0.4);
-    }
-    
     .summary {
-      margin-top:30px; 
-      padding:25px; 
-      background: var(--card);
-      border-radius:16px; 
-      width:90%; 
-      max-width:400px;
-      text-align:center; 
-      line-height:1.6; 
-      font-size:1.1rem;
-      box-shadow: 0 4px 20px var(--shadow);
-      backdrop-filter: blur(4px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin:30px auto; padding:20px; background:rgba(53,56,110,0.8);
+      border-radius:8px; max-width:400px; text-align:center; line-height:1.4;
+      font-size:1rem;
     }
-    
-    .summary strong { 
-      color: var(--accent); 
-      font-weight: 500;
-    }
-    
-    .goto-cantab {
-      margin-top:25px; 
-      display:inline-block;
-      padding:14px 25px; 
-      background: var(--accent2); 
-      color:#fff;
-      border-radius:8px; 
-      text-decoration:none;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
-    }
-    
-    .goto-cantab:hover {
-      background: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(108, 92, 231, 0.4);
-    }
-    
-    /* 响应式调整 */
-    @media (max-width: 480px) {
-      .container, .summary {
-        padding: 20px;
-        width: 95%;
-      }
-      
-      h2 {
-        font-size: 1.5em;
-      }
-    }
+    .summary strong { color:#a29bfe; }
+    a.next { display:inline-block; margin-top:12px; color:#a29bfe;
+             text-decoration:underline; cursor:pointer; }
   </style>
 </head>
 <body>
@@ -185,25 +52,31 @@
         <input type="number" id="sleepiness" min="1" max="10" required
                placeholder="1=alert…10=very sleepy"/>
       </div>
-      <button type="submit">Show My Summary →</button>
+      <button type="submit">Continue →</button>
     </form>
   </div>
 
-  <div id="resultSummary" class="summary" style="display:none;"></div>
+  <div id="resultSummary" class="summary" style="display:none;">
+    <!-- populated by script -->
+  </div>
 
+  <!-- (optionally embed character.html below, or link to it) -->
+  <!--
+  <iframe src="character.html" style="width:100%;height:500px;border:none;"></iframe>
+  -->
 
   <script>
     const form = document.getElementById('sleepForm');
     const summaryEl = document.getElementById('resultSummary');
-    const goLink    = document.getElementById('goCantab');
     let sleepLength = null, sleepText = '';
 
     document.querySelectorAll('.option-button').forEach(btn => {
       btn.onclick = () => {
-        document.querySelectorAll('.option-button').forEach(b=>b.classList.remove('selected'));
+        document.querySelectorAll('.option-button')
+                .forEach(b => b.classList.remove('selected'));
         btn.classList.add('selected');
         sleepLength = btn.dataset.val;
-        sleepText   = btn.dataset.text;
+        sleepText = btn.dataset.text;
       };
     });
 
@@ -211,29 +84,32 @@
       e.preventDefault();
       const sleepy = +document.getElementById('sleepiness').value;
       if (!sleepLength || sleepy < 1 || sleepy > 10) {
-        return alert('Please select hours slept and enter your sleepiness.');
+        return alert('Please answer both questions.');
       }
 
       // 1) base t from hours slept
       let t = sleepLength === 'short'  ? 1
             : sleepLength === 'normal' ? 0.5
             : 0;
+
       // 2) nudge by sleepiness around mid-point
       t += (sleepy - 5) / 20;
       t = Math.min(1, Math.max(0, t));
 
-      // show summary
+      // show summary:
       summaryEl.innerHTML = `
-        You slept <strong>${sleepText}</strong>, sleepiness <strong>${sleepy}/10</strong><br>
-        &rarr; your sleep-deprivation index is <strong>t = ${t.toFixed(2)}</strong>.
+        You slept <strong>${sleepText}</strong>, sleepiness <strong>${sleepy}/10</strong>  
+        ⇒ deprivation index <strong>t = ${t.toFixed(2)}</strong><br/>
+        Scroll down to see your personalized cognitive preview.
       `;
       summaryEl.style.display = 'block';
-      goLink.style.display = 'inline-block';
 
-      // store for character.html
+      // store for use in character.html
       localStorage.setItem('deprive_t', t.toFixed(2));
+
+      // if you want to auto-scroll into the iframe:
+      // document.querySelector('iframe').scrollIntoView({ behavior:'smooth' });
     };
   </script>
-
 </body>
 </html>
