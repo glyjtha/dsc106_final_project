@@ -1,234 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Sleep questions 💤</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-
-        body{
-            color:white;
-            font-family:'italic', sans-serif;
-            display: flex;
-            align-items: center;
-            height: auto;
-        }
-        #sleep-survey {
-            margin: auto;
-            padding: 30px;
-            border-radius: 15px;
-            align-items: center;
-            }
-
-        .question {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        }
-
-        .question.active {
-      display: block;
-      font-family:'Quicksand', sans-serif;
-      
-      opacity: 1;
+  <meta charset="UTF-8" />
+  <title>Sleep Survey Summary 💤</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <style>
+    /* 使用仪表板的主色调 */
+    :root {
+      --bg: #1a1f3b;           
+      --nav: #2e3153;          
+      --card: rgba(53, 56, 110, 0.8);         
+      --text: #e0e6f2;         
+      --accent: #a29bfe;       
+      --accent2: #6c5ce7;      
+      --accent3: #5d55d6;
+      --shadow: rgba(0,0,0,0.4);
+      --font: 'Quicksand', sans-serif;
     }
+    
+    body { 
+      margin:0; 
+      font-family: var(--font); 
+      background: var(--bg); 
+      color: var(--text);
+      display:flex; 
+      flex-direction:column; 
+      align-items:center; 
+      justify-content:center;
+      min-height:100vh; 
+      padding:20px; 
+    }
+    
+    .container { 
+      background: var(--card); 
+      padding:30px; 
+      border-radius:16px;
+      width:90%; 
+      max-width:400px; 
+      box-shadow: 0 4px 20px var(--shadow);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    h2 { 
+      margin-bottom:20px; 
+      text-align:center; 
+      color: var(--accent);
+      font-size: 1.8em;
+    }
+    
+    .question { 
+      margin-bottom:20px; 
+    }
+    
+    .question p {
+      margin-bottom: 10px;
+      color: #cfd8e3;
+    }
+    
     .option-button {
-      display: block;
-      width: 100%;
-      background: #b0d5ed;
-      border: 1px solid white;
-      padding: 10px;
-      margin: 8px 0;
-      cursor: pointer;
-      text-align: center;
+      display:block; 
+      width:100%; 
+      padding:12px; 
+      margin:8px 0;
+      border: 1px solid var(--accent); 
+      border-radius:8px; 
+      background: rgba(108, 92, 231, 0.1);
+      color: var(--text); 
+      cursor:pointer; 
+      text-align:center;
+      transition: all 0.3s ease;
     }
-    .option-button:hover, .option-button.selected {
-      background: #3388ff;
-      color: white;
+    
+    .option-button:hover {
+      background: rgba(108, 92, 231, 0.3);
     }
-    .nav-buttons {
-        display: flex;
-        width: 100vw; /* force full screen width */
-        max-width: 100%;
-        box-sizing: border-box;
-        padding: 0 5vw; /* optional, adds margin */
-        justify-content: space-between;
-        margin-top: 24px;
+    
+    .option-button.selected { 
+      background: var(--accent2); 
+      color:#fff; 
+      box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
     }
-    .back-wrapper, .next-wrapper {
-        flex: 1;
-        display: flex;
+    
+    input[type=number] {
+      width:100%; 
+      padding:12px; 
+      margin-top:8px;
+      border: 1px solid var(--accent); 
+      border-radius:8px; 
+      font-size:1rem;
+      background: rgba(26, 31, 59, 0.5);
+      color: var(--text);
     }
-
-    .back-wrapper {
-    justify-content: flex-start;
+    
+    input[type=number]:focus {
+      outline: none;
+      border-color: var(--accent2);
+      box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.3);
     }
-
-    .next-wrapper {
-    justify-content: flex-end;
+    
+    button[type=submit] {
+      width:100%; 
+      padding:14px; 
+      margin-top:20px;
+      background: var(--accent2); 
+      border:none; 
+      border-radius:8px;
+      color:#fff; 
+      font-size:1.1rem; 
+      cursor:pointer;
+      transition: all 0.3s ease;
     }
-
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin: 4px;
-      background: gray;
+    
+    button[type=submit]:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(108, 92, 231, 0.4);
     }
-    .dot.active {
-      background: pink;
+    
+    .summary {
+      margin-top:30px; 
+      padding:25px; 
+      background: var(--card);
+      border-radius:16px; 
+      width:90%; 
+      max-width:400px;
+      text-align:center; 
+      line-height:1.6; 
+      font-size:1.1rem;
+      box-shadow: 0 4px 20px var(--shadow);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
-    #progress-dots {
-      display: flex;
-      justify-content: center;
-      margin-top: 20px;
+    
+    .summary strong { 
+      color: var(--accent); 
+      font-weight: 500;
     }
-
-    </style>
+    
+    .goto-cantab {
+      margin-top:25px; 
+      display:inline-block;
+      padding:14px 25px; 
+      background: var(--accent2); 
+      color:#fff;
+      border-radius:8px; 
+      text-decoration:none;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+    }
+    
+    .goto-cantab:hover {
+      background: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(108, 92, 231, 0.4);
+    }
+    
+    /* 响应式调整 */
+    @media (max-width: 480px) {
+      .container, .summary {
+        padding: 20px;
+        width: 95%;
+      }
+      
+      h2 {
+        font-size: 1.5em;
+      }
+    }
+  </style>
 </head>
 <body>
-    <section id="sleep-survey">
-        <h2>What is your sleep habit every day?(answer question below) 💤</h2>
-        <form id="sleepForm">
-            <div id="question-container"></div>
-            <div class="nav-buttons">
-                <div class="nav-buttons">
-                    <div id="back-wrapper">
-                      <button type="button" id="prevBtn">Back</button>
-                    </div>
-                    <div id="next-wrapper">
-                      <button type="button" id="nextBtn">Next</button>
-                      <button type="submit" id="submitBtn" style="display:none;">Submit</button>
-                    </div>
-                  </div>                  
-            </div>
-            <div id="progress-dots"></div>
-        </form>
-        <div id="thankYouMsg" style="display:none; text-align: center; margin-top: 40px; font-size: 1.1rem; font-family: 'Quicksand', sans-serif;">
-            Thank you for your response!<br>
-            Now you have a general reflect of your sleep, but do you know the effects of sleep deprivation?<br>
-            Now let's walk through some interesting experiments and see their results.<br>
-            (scroll down)
-          </div>
-          
-    </section>
-    <script>
-        const questions = [
-        {
-            label: "1. What time do you go to sleep every day?",
-            name: "sleep_time",
-            options: ["Before 10pm", "10-11pm", "11pm-1am", "After 1am 🦉"]
-        },
-        {
-            label: "2. How long does it take you to fall asleep?",
-            name: "fall_time",
-            options: ["Right away", "Less than 10min", "10-20 min", "More than 20 min"]
-        },
-        {
-            label: "3. How long do you sleep every night?",
-            name: "sleep_length",
-            options: ["<=5 hrs", "5-7 hrs", ">=7 hrs", "No I don't sleep 😏"]
-        },
-        {
-            label: "4. Do you wake in the night? How many times?",
-            name: "wake_times",
-            options: ["No I don't wake up in the night", "1 time", "2 or more times"]
-        },
-        {
-            label: "5. How often do you consume alcohol🍷 or caffeine☕️ every day?",
-            name: "caffeine",
-            options: ["Never", "1 bottle", "2 bottles", ">2 bottles"]
-        },
-        {
-            label: "6. Do you feel sleepy now? Yes, I mean now🌚[1(nonsleepy) ~ 10(very sleepy)]",
-            name: "sleepiness_score",
-            type: "input"
-        }
-        ];
 
-        let currentIndex = 0;
-        const container = document.getElementById("question-container");
-        const dotsContainer = document.getElementById("progress-dots");
-        const prevBtn = document.getElementById("prevBtn");
-        const nextBtn = document.getElementById("nextBtn");
-        const submitBtn = document.getElementById("submitBtn");
-        const form = document.getElementById("sleepForm");
-        const thankYouMsg = document.getElementById("thankYouMsg");
+  <div class="container">
+    <h2>Quick Sleep Survey</h2>
+    <form id="sleepForm">
+      <div class="question">
+        <p>How many hours did you sleep last night?</p>
+        <button type="button" class="option-button" data-val="short" data-text="≤5 hrs">≤5 hrs</button>
+        <button type="button" class="option-button" data-val="normal" data-text="5–7 hrs">5–7 hrs</button>
+        <button type="button" class="option-button" data-val="enough" data-text="≥7 hrs">≥7 hrs</button>
+      </div>
+      <div class="question">
+        <p>Current sleepiness (1–10)</p>
+        <input type="number" id="sleepiness" min="1" max="10" required
+               placeholder="1=alert…10=very sleepy"/>
+      </div>
+      <button type="submit">Show My Summary →</button>
+    </form>
+  </div>
 
-        const answers = {};
+  <div id="resultSummary" class="summary" style="display:none;"></div>
 
-        function renderDots() {
-        dotsContainer.innerHTML = '';
-        questions.forEach((_, i) => {
-            const dot = document.createElement("div");
-            dot.className = "dot" + (i === currentIndex ? " active" : "");
-            dotsContainer.appendChild(dot);
-        });
-        }
 
-        function renderQuestion() {
-        const q = questions[currentIndex];
-        container.innerHTML = '';
-        const div = document.createElement("div");
-        div.className = "question active";
-        div.innerHTML = `<p>${q.label}</p>`;
-        if (q.type === "input") {
-            const input = document.createElement("input");
-            input.type = "number";
-            input.name = q.name;
-            input.placeholder = "Enter number (1–10)";
-            input.required = true;
-            div.appendChild(input);
-        } else {
-            q.options.forEach(opt => {
-            const btn = document.createElement("button");
-            btn.type = "button";
-            btn.textContent = opt;
-            btn.className = "option-button";
-            btn.onclick = () => {
-                answers[q.name] = opt;
-                const all = container.querySelectorAll("button");
-                all.forEach(b => b.classList.remove("selected"));
-                btn.classList.add("selected");
-            };
-            div.appendChild(btn);
-            });
-        }
-        container.appendChild(div);
-        renderDots();
+  <script>
+    const form = document.getElementById('sleepForm');
+    const summaryEl = document.getElementById('resultSummary');
+    const goLink    = document.getElementById('goCantab');
+    let sleepLength = null, sleepText = '';
 
-        prevBtn.style.display = currentIndex > 0 ? "inline-block" : "none";
-        nextBtn.style.display = currentIndex < questions.length - 1 ? "inline-block" : "none";
-        submitBtn.style.display = currentIndex === questions.length - 1 ? "inline-block" : "none";
-        }
+    document.querySelectorAll('.option-button').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('.option-button').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');
+        sleepLength = btn.dataset.val;
+        sleepText   = btn.dataset.text;
+      };
+    });
 
-        nextBtn.onclick = () => {
-        if (currentIndex < questions.length - 1) {
-            currentIndex++;
-            renderQuestion();
-        }
-        };
+    form.onsubmit = e => {
+      e.preventDefault();
+      const sleepy = +document.getElementById('sleepiness').value;
+      if (!sleepLength || sleepy < 1 || sleepy > 10) {
+        return alert('Please select hours slept and enter your sleepiness.');
+      }
 
-        prevBtn.onclick = () => {
-        if (currentIndex > 0) {
-            currentIndex--;
-            renderQuestion();
-        }
-        };
+      // 1) base t from hours slept
+      let t = sleepLength === 'short'  ? 1
+            : sleepLength === 'normal' ? 0.5
+            : 0;
+      // 2) nudge by sleepiness around mid-point
+      t += (sleepy - 5) / 20;
+      t = Math.min(1, Math.max(0, t));
 
-        form.onsubmit = (e) => {
-        e.preventDefault();
-        const lastInput = form.querySelector("input[name='sleepiness_score']");
-        if (lastInput && lastInput.value) {
-            answers["sleepiness_score"] = lastInput.value;
-        }
-        form.style.display = "none";
-        thankYouMsg.style.display = "block";
-        console.log("Submitted answers:", answers);
-        };
+      // show summary
+      summaryEl.innerHTML = `
+        You slept <strong>${sleepText}</strong>, sleepiness <strong>${sleepy}/10</strong><br>
+        &rarr; your sleep-deprivation index is <strong>t = ${t.toFixed(2)}</strong>.
+      `;
+      summaryEl.style.display = 'block';
+      goLink.style.display = 'inline-block';
 
-        renderQuestion();
-    </script>
-    </body>
-    </html>
+      // store for character.html
+      localStorage.setItem('deprive_t', t.toFixed(2));
+    };
+  </script>
+
+</body>
+</html>
