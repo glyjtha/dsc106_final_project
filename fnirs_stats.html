@@ -2,68 +2,118 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>fNIRS Per-Subject ΔHbO</title>
+  <title>Per-Subject ΔHbO (Post–Pre)</title>
   <script src="https://unpkg.com/d3@7/dist/d3.min.js"></script>
+
   <style>
+    :root {
+      --clr-positive: #e17055;
+      --clr-negative: #74b9ff; 
+      --clr-text:     #2d3436;
+      --clr-bg:       #ffffff;
+      --clr-axis:     #888;
+    }
+
     body {
-      font-family: sans-serif;
-      color: #e0e6f2;
-      padding: 20px;
+      margin: 0;
+      padding: 1rem;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      background: #f5f6fa;
+      color: var(--clr-text);
     }
+
     .viz {
-      background: white;
-      padding: 16px;
-      max-width: 100%;
+      background: var(--clr-bg);
+      padding: 1.5rem;
+      border-radius: 4px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      max-width: 700px;
+      margin: 0 auto;
     }
-    svg {
-      width: 100%;
-      height: 300px;
-    }
-    .bar {
-      transition: fill 0.2s;
-    }
-    .bar:hover {
-      fill: #ffeaa7 !important;
-    }
-    .axis text {
-      font-size: 12px;
-      fill: #333;
-    }
-    .axis path, .axis line {
-      stroke: #888;
-    }
+
     .title {
       text-align: center;
-      font-size: 1.4em;
-      margin-bottom: 8px;
-      color: #a29bfe;
+      font-size: 1.5rem;
+      margin-bottom: 0.25rem;
+      color: #000;
+    }
+
+    .subtitle {
+      text-align: center;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      color: #000;
+    }
+
+    .legend {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: #000;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .legend-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+    }
+    .legend-swatch.positive { background: var(--clr-positive); }
+    .legend-swatch.negative { background: var(--clr-negative); }
+
+    svg {
+      width: 100%;
+      height: auto;
+    }
+    .axis text {
+      font-size: 0.8rem;
+      fill: #000 ;
+    }
+    .axis path,
+    .axis line {
+      stroke: #000 ;
     }
     .tooltip {
       position: absolute;
-      text-align: center;
-      padding: 6px;
-      font-size: 12px;
-      background: #2d3436;
-      color: #ffffff;
-      border-radius: 4px;
+      padding: 6px 8px;
+      font-size: 0.8rem;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      border-radius: 3px;
       pointer-events: none;
       opacity: 0;
       transition: opacity 0.2s;
     }
   </style>
 </head>
-<body>
 
+<body>
   <div class="viz">
     <div class="title">Per-Subject ΔHbO (Post – Pre)</div>
-    <svg id="subject-bar-chart"></svg>
+    <div class="legend">
+      <div class="legend-item">
+        <span class="legend-swatch positive"></span>
+        <span>↑ ΔHbO (overload)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-swatch negative"></span>
+        <span>↓ ΔHbO (reduced load)</span>
+      </div>
+    </div>
+
+    <svg id="subject-bar-chart" viewBox="0 0 700 350"></svg>
   </div>
 
   <div id="tooltip" class="tooltip"></div>
 
   <script>
-  const PRE_CSV  = "fnirs_pre_summary.csv";   // columns: subject, mean_intensity
-  const POST_CSV = "fnirs_post_summary.csv";  // same format
+  const PRE_CSV  = "fnirs_pre_summary.csv";   
+  const POST_CSV = "fnirs_post_summary.csv"; 
 
   Promise.all([
     d3.csv(PRE_CSV,  d => ({ subject: d.subject, pre: +d.mean_intensity })),
