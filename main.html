@@ -171,7 +171,7 @@
         Use the dropdown to switch metrics and the slider to slide between “before” and “after” sleep deprivation. 
         <br><br>
 
-        🔵 Dots start in blue (baseline performance).  
+        <li>🔵 Dots start in blue (baseline performance).</li> 
         As you move the slider to simulate sleep deprivation:
         <ul style="line-height: 1.6; margin-left: 16px;">
           <li>🟢 Dots turn green if performance improved (e.g., fewer errors, faster reaction)</li>
@@ -225,13 +225,23 @@
           title="fNIRS brain heatmap">
         </iframe>
       </div>
-      <div class="viz" style="margin-top: 16px;">
+
+      <aside class="reader-notes">
+    <h3>Reader’s Notes: Frontal ΔHbO Changes</h3>
+    <p>This bar chart plots each subject’s change in prefrontal oxygenation (ΔHbO) after 24 hours awake versus their well-rested baseline. Bars above the dashed line (in red) indicate increased oxygenation—evidence that the frontal cortex had to work harder under fatigue. Bars below (in blue) suggest a relative drop in activation, hinting at individual differences in compensatory response or measurement variability.</p>
+    <p>Notice that Subjects <strong>005</strong>, <strong>006</strong>, and <strong>009</strong> display the largest positive shifts, meaning they experienced the greatest hemodynamic load when sleep deprived. In contrast, Subjects <strong>001</strong>, <strong>004</strong>, and <strong>010</strong> show modest decreases, which may reflect alternate neural strategies or noise.</p>
+    <p>Because the frontal lobe is key for executive control and attention, these ΔHbO changes help explain why most participants slow down and make more errors in our interactive tasks after a sleepless night. In short, the taller the red bar, the more “extra work” required by your brain—and the higher the cognitive cost of going without sleep.</p>
+  </aside>
+
+      <div class="chart-notes-container">
+  <div class="viz" style="margin-top: 16px;">
         <iframe
           src="fnirs_stats.html"
           style="width:100%; height:450px; border:none; border-radius:8px;"
           title="fNIRS stats">
         </iframe>
       </div>
+      
     </section>
     
 
