@@ -19,6 +19,9 @@
       --font: 'Quicksand', sans-serif;
     }
     * { margin:0; padding:0; box-sizing:border-box; }
+    #bg-music {
+      display: none;
+    }
     body {
       display: flex; height:100vh;
       background: var(--bg) var(--stars) top center repeat;
@@ -90,6 +93,7 @@
   </style>
 </head>
   <body style="opacity: 0; transition: opacity 1.2s ease;">
+    
     <script>
       window.onload = () => {
         document.body.style.opacity = 1;
@@ -114,7 +118,7 @@
     <header>
       <h2>Effect of 24-hour Sleep Deprivation</h2>
     </header>
-
+    <audio id="bg-music" src="Let it Go.mp3" autoplay loop></audio>
     <section id="intro">
       <h3>Introduction</h3>
       <p>Let's start by several questions about your sleep:</p>
@@ -302,5 +306,6 @@
       });
     });
   </script>
+  
 </body>
 </html>
