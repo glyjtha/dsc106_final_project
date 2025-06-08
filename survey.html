@@ -48,10 +48,27 @@
       color: white;
     }
     .nav-buttons {
-      margin-top: 20px;
-      display: flex;
-      justify-content: space-between;
+        display: flex;
+        width: 100vw; /* force full screen width */
+        max-width: 100%;
+        box-sizing: border-box;
+        padding: 0 5vw; /* optional, adds margin */
+        justify-content: space-between;
+        margin-top: 24px;
     }
+    .back-wrapper, .next-wrapper {
+        flex: 1;
+        display: flex;
+    }
+
+    .back-wrapper {
+    justify-content: flex-start;
+    }
+
+    .next-wrapper {
+    justify-content: flex-end;
+    }
+
     .dot {
       width: 10px;
       height: 10px;
@@ -76,9 +93,15 @@
         <form id="sleepForm">
             <div id="question-container"></div>
             <div class="nav-buttons">
-                <button type="button" id="prevBtn">Back</button>
-                <button type="button" id="nextBtn">Next</button>
-                <button type="submit" id="submitBtn" style="display:none;">Submit</button>
+                <div class="nav-buttons">
+                    <div id="back-wrapper">
+                      <button type="button" id="prevBtn">Back</button>
+                    </div>
+                    <div id="next-wrapper">
+                      <button type="button" id="nextBtn">Next</button>
+                      <button type="submit" id="submitBtn" style="display:none;">Submit</button>
+                    </div>
+                  </div>                  
             </div>
             <div id="progress-dots"></div>
         </form>
@@ -95,7 +118,7 @@
         {
             label: "1. What time do you go to sleep every day?",
             name: "sleep_time",
-            options: ["Before 10pm", "10-11pm", "11-1pm", "After 1pm 🦉"]
+            options: ["Before 10pm", "10-11pm", "11pm-1am", "After 1am 🦉"]
         },
         {
             label: "2. How long does it take you to fall asleep?",
@@ -113,12 +136,12 @@
             options: ["No I don't wake up in the night", "1 time", "2 or more times"]
         },
         {
-            label: "5. How often do you consume alcohol🍷 or caffeine☕️?",
+            label: "5. How often do you consume alcohol🍷 or caffeine☕️ every day?",
             name: "caffeine",
-            options: ["Never", "1 shot", "2 shots", ">2 shots"]
+            options: ["Never", "1 bottle", "2 bottles", ">2 bottles"]
         },
         {
-            label: "6. Do you feel sleepy now? Yes, I mean now🌚[1(momsleepy) ~ 10(very sleepy)]",
+            label: "6. Do you feel sleepy now? Yes, I mean now🌚[1(nonsleepy) ~ 10(very sleepy)]",
             name: "sleepiness_score",
             type: "input"
         }
