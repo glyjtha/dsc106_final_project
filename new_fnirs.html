@@ -12,22 +12,29 @@
     margin:0;padding:1rem;
     font-family:system-ui,Arial,sans-serif;
     display:flex;flex-direction:column;align-items:center;gap:.9rem;
-    background:#0d0d0d;
+    background:#35386e;           /* matches your dashboard “card” colour */
     color:#e6e6e6;
   }
 
   h2{margin:0;font-size:clamp(1.4rem,3.8vw,2.4rem);text-align:center}
 
-  #controls{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;font-size:.9rem}
+  #controls{
+    display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;font-size:.9rem
+  }
   #zoomBtns button{
       background:#222;border:none;border-radius:6px;color:#e6e6e6;
       font-size:1.1rem;width:34px;height:28px;cursor:pointer;
-      box-shadow:0 1px 4px rgba(0,0,0,.35);transition:background .15s;
+      transition:background .15s;
   }
   #zoomBtns button:hover{background:#444}
 
-  /* ↓ moved SVG upward by shrinking margin-top */
-  #chart{box-shadow:0 2px 12px rgba(0,0,0,.35);border-radius:10px;margin-top:3rem}
+  /* ─── INSIDE VIEWING FRAME ───
+     › Drop-shadow & rounded corners removed
+     › Width set to 1080 px so the whole plot is visible            */
+  #chart{
+      width:1080px;           /* NEW – enlarge frame */
+      margin-top:2rem;        /* slightly tighter spacing */
+  }
 
   /* legend ---------------------------------------------------------- */
   .legend text{font-size:10px;dominant-baseline:middle}
@@ -39,9 +46,6 @@
 
   /* slider ---------------------------------------------------------- */
   input[type=range]{width:180px;margin:0 .4rem}
-
-  /* head / ears / nose --------------------------------------------- */
-  .head-outline,.nose,.ear{stroke:#666;stroke-width:1.2;fill:none;pointer-events:none;stroke-dasharray:6 4;opacity:.6}
 
   /* orientation labels --------------------------------------------- */
   .axis-label{fill:#aaa;font-size:11px;font-weight:600;dominant-baseline:middle;pointer-events:none}
@@ -55,6 +59,7 @@
 
 <h2>Sleep deprivation reshapes brain oxygen flow</h2>
 
+<!-- ───────────  CONTROLS  ─────────── -->
 <div id="controls">
   <label><input type="radio" name="dataset" value="pre"  checked> Before Sleep Deprive</label>
   <label><input type="radio" name="dataset" value="post"> After Sleep Deprive</label>
@@ -80,8 +85,7 @@
 
 <script>
 /* ───────── CONFIG ───────── */
-const WIDTH = 2080;          
-const SIZE  = 880;         
+const SIZE  = 1080;          // NEW – bigger viewport
 const M = {top:22,right:68,bottom:30,left:30};
 const DOT_R = 7;
 
@@ -91,7 +95,7 @@ const svg = d3.select('#chart')
   .attr('viewBox',[0,0,SIZE,SIZE])
   .attr('width',SIZE).attr('height',SIZE);
 
-const zoomLayer = svg.append('g').attr('class','zoom-layer');   // zoomed group
+const zoomLayer = svg.append('g').attr('class','zoom-layer');
 const defs = svg.append('defs');
 
 function makeGradient(id, scale, steps = 60){
