@@ -115,7 +115,7 @@
        .style("font-size","11px").style("fill","#555")
        .text(yLabels[metric]);
       g.append("text")
-       .attr("x",plotWidth/2).attr("y",H-pad+34)
+       .attr("x",plotWidth/2).attr("y",H-pad+54)
        .style("font-size","11px").style("fill","#555")
        .text("Subject ID");
       // circles
@@ -143,6 +143,7 @@
         // draw axes
         gx.call(d3.axisBottom(xScale).tickSize(0))
           .selectAll("text").attr("transform","rotate(-65)")
+          .attr("y", 10)
           .style("text-anchor","end").style("font-size","9px");
         gy.call(d3.axisLeft(yScale).ticks(4));
         // update points
