@@ -623,6 +623,55 @@
     }
     @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
     
+    .sleep-cta {
+      background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+      color: white;
+      padding: 25px;
+      text-align: center;
+      margin: 40px auto;
+      border-radius: 16px;
+      max-width: 100%;
+      box-shadow: 0 8px 32px rgba(108, 92, 231, 0.4);
+      border: 1px solid rgba(255,255,255,0.1);
+      animation: pulse 6s infinite alternate;
+    }
+
+    .sleep-message {
+      font-size: 1.8rem;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .highlight-text {
+      color: #ffd700;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .power-mode {
+      font-style: italic;
+      color: #ff7675;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 8px 32px rgba(108, 92, 231, 0.4); }
+      50% { transform: scale(1.02); box-shadow: 0 12px 40px rgba(108, 92, 231, 0.6); }
+      100% { transform: scale(1); box-shadow: 0 8px 32px rgba(108, 92, 231, 0.4); }
+    }
+
+    /* Make sure Font Awesome is loaded for icons */
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
+
+    @media (max-width: 768px) {
+      .sleep-message {
+        font-size: 1.4rem;
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -863,18 +912,29 @@
         </ul>
       </div>
       <div class="key-point">
-        <h4><i class="fas fa-exclamation-circle"></i> How to Improve sleep?</h4>
+        <h4><i class="fas fa-exclamation-circle"></i> Tips for Better Sleep</h4>
         <ul style="line-height: 1.6; margin-left: 20px; margin-top: 10px;">
-          <li>We can try to make sure sleep at least 7 hours to make sure enough sleep time every day</li>
-          <li>Reducing the level of stress helps us decrease our allostatic load, and therefore improve our sleep quality</li>
-          <li>Creating a dark and quite environment</li>
+          <li>Aim for at least 7–8 hours of uninterrupted sleep each night to support cognitive function and mood.</li>
+          <li>Practice stress-reduction techniques—like mindfulness or gentle stretching—to lower your allostatic load and promote deeper rest.</li>
+          <li>Create a sleep-friendly environment: keep your bedroom cool, dark, and quiet (consider blackout curtains and white-noise machines).</li>
         </ul>
       </div>
       
+      
       <div class="conclusion">
         <h3>Conclusion</h3>
-        <p>Our research demonstrates that 24-hour sleep deprivation causes significant and measurable declines in cognitive performance, particularly in executive functions mediated by the frontal lobe. The brain compensates by increasing activation in these regions, but this compensatory effort is insufficient to maintain baseline performance levels. These findings highlight the critical importance of adequate sleep for cognitive functioning and decision-making.</p>
+        <p>In just 24 hours without sleep, our brains show a dramatic drop in speed, accuracy, and decision-making power—especially in the frontal lobe's executive centers. Although neural circuits ramp up their activity in a valiant effort to keep us sharp, they simply can’t fully compensate. These striking results drive home one message: sleep is not optional. It’s the cornerstone of clear thinking, peak performance, and sound judgment.</p>
       </div>
+
+      <div class="sleep-cta">
+        <div class="sleep-message">
+          <i class="fas fa-brain"></i>
+          <span class="highlight-text">Your brain runs on sleep</span> 
+          - don't let it go into <span class="power-mode">power saving mode!</span>
+          <i class="fas fa-battery-quarter"></i>
+        </div>
+      </div>
+      
     </section>
     
     <section id="data">
