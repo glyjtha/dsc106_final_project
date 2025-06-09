@@ -1,321 +1,309 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8" />
-  <title>Interactive fNIRS Heatmap – Sleep-Deprivation Study</title>
+<meta charset="utf-8" />
+<title>Interactive fNIRS Heatmap – Sleep-Deprivation Study</title>
 
-  <!-- ──────────────  BASIC STYLES  ─────────────────────────────────── -->
-  <style>
-    :root { color-scheme: light dark }
+<!-- ───────────  BASIC STYLES  ─────────── -->
+<style>
+  :root{color-scheme:light dark;}
 
-    body{
-      margin:0;padding:1rem;
-      font-family:system-ui,Arial,sans-serif;
-      display:flex;flex-direction:column;align-items:center;gap:.8rem
-    }
+  body{
+    margin:0;padding:1rem;
+    font-family:system-ui,Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;gap:.9rem;
+    background:#0d0d0d;
+    color:#e6e6e6;
+  }
 
-    h2{margin:0;font-size:clamp(1.4rem,3.8vw,2.4rem);text-align:center}
+  h2{margin:0;font-size:clamp(1.4rem,3.8vw,2.4rem);text-align:center}
 
-    #controls{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;font-size:.9rem}
+  #controls{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap;font-size:.9rem}
+  #zoomBtns button{
+      background:#222;border:none;border-radius:6px;color:#e6e6e6;
+      font-size:1.1rem;width:34px;height:28px;cursor:pointer;
+      box-shadow:0 1px 4px rgba(0,0,0,.35);transition:background .15s;
+  }
+  #zoomBtns button:hover{background:#444}
 
-    #chart{box-shadow:0 2px 10px rgba(0,0,0,.14);border-radius:10px;margin-top:11rem}
+  /* ↓ moved SVG upward by shrinking margin-top */
+  #chart{box-shadow:0 2px 12px rgba(0,0,0,.35);border-radius:10px;margin-top:3rem}
 
-    /* legend ---------------------------------------------------------- */
-    .legend text{font-size:10px;dominant-baseline:middle}
-    .legend-title{font-size:11px;font-weight:600;dominant-baseline:hanging}
+  /* legend ---------------------------------------------------------- */
+  .legend text{font-size:10px;dominant-baseline:middle}
+  .legend-title{font-size:11px;font-weight:600;dominant-baseline:hanging}
 
-    /* tooltip --------------------------------------------------------- */
-    .tooltip-bg{fill:#fff;stroke:#333;stroke-width:.6;opacity:.9}
-    .tooltip-text{font-size:11px;pointer-events:none}
+  /* tooltip --------------------------------------------------------- */
+  .tooltip-bg{fill:#111;stroke:#999;stroke-width:.6;opacity:.95}
+  .tooltip-text{font-size:11px;fill:#f3f3f3;pointer-events:none}
 
-    /* slider ---------------------------------------------------------- */
-    input[type=range]{width:180px;margin:0 .4rem}
+  /* slider ---------------------------------------------------------- */
+  input[type=range]{width:180px;margin:0 .4rem}
 
-    /* head / ears / nose --------------------------------------------- */
-    .head-outline,.nose,.ear{stroke:#888;stroke-width:1.2;fill:none;pointer-events:none;
-      stroke-dasharray:6 4;opacity:.65}
+  /* head / ears / nose --------------------------------------------- */
+  .head-outline,.nose,.ear{stroke:#666;stroke-width:1.2;fill:none;pointer-events:none;stroke-dasharray:6 4;opacity:.6}
 
-    /* orientation labels --------------------------------------------- */
-    .axis-label{fill:#aaa;font-size:11px;font-weight:600;dominant-baseline:middle;
-      pointer-events:none}
+  /* orientation labels --------------------------------------------- */
+  .axis-label{fill:#aaa;font-size:11px;font-weight:600;dominant-baseline:middle;pointer-events:none}
 
-    #legend-container{position:absolute;top:150px;right:5%}
-  </style>
-  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+  #legend-container{position:absolute;top:150px;right:5%}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
 </head>
 
 <body>
 
-  <h2>Sleep deprivation reshapes brain oxygen flow</h2>
+<h2>Sleep deprivation reshapes brain oxygen flow</h2>
 
-  <div id="controls">
-    <label><input type="radio" name="dataset" value="pre"  checked> Before Sleep Deprive</label>
-    <label><input type="radio" name="dataset" value="post"> After Sleep Deprive</label>
-    <label><input type="radio" name="dataset" value="delta"> Δ (After-Before)</label>
+<div id="controls">
+  <label><input type="radio" name="dataset" value="pre"  checked> Before Sleep Deprive</label>
+  <label><input type="radio" name="dataset" value="post"> After Sleep Deprive</label>
+  <label><input type="radio" name="dataset" value="delta"> Δ (After-Before)</label>
 
-    <span style="border-left:1px solid currentColor;height:.9rem"></span>
+  <span style="border-left:1px solid currentColor;height:.9rem"></span>
 
-    <label>Subject: <input type="range" id="subjRange" min="1" max="10" step="1" value="1"></label>
-    <span id="subjLabel">1</span>
+  <label>Subject: <input type="range" id="subjRange" min="1" max="10" step="1" value="1"></label>
+  <span id="subjLabel">1</span>
+
+  <span style="border-left:1px solid currentColor;height:.9rem"></span>
+
+  <div id="zoomBtns">
+    <button id="zoom_in" aria-label="zoom in">＋</button>
+    <button id="zoom_out" aria-label="zoom out">－</button>
   </div>
+</div>
 
-  <div id="chart"></div>
-  <div id="legend-container">
-    <svg id="legend-svg" width="100" height="260"></svg>
-  </div>
+<div id="chart"></div>
+<div id="legend-container">
+  <svg id="legend-svg" width="100" height="260"></svg>
+</div>
 
-  <script>
-  /* ───────────────── CONFIG ───────────────── */
-  const SIZE = 680;
-  const M = {top:22,right:68,bottom:30,left:30};
-  const DOT_R = 7;
+<script>
+/* ───────── CONFIG ───────── */
+const WIDTH = 2080;          
+const SIZE  = 880;         
+const M = {top:22,right:68,bottom:30,left:30};
+const DOT_R = 7;
 
-  /* ───────────────── SVG ROOT ─────────────── */
-  const svg = d3.select('#chart')
-      .append('svg')
-      .attr('viewBox',[0,0,SIZE,SIZE])
-      .attr('width',SIZE)
-      .attr('height',SIZE);
+/* root SVG & zoom layer */
+const svg = d3.select('#chart')
+  .append('svg')
+  .attr('viewBox',[0,0,SIZE,SIZE])
+  .attr('width',SIZE).attr('height',SIZE);
 
-  const defs = svg.append('defs');
+const zoomLayer = svg.append('g').attr('class','zoom-layer');   // zoomed group
+const defs = svg.append('defs');
 
-  function makeGradient(id, scale, steps = 60) {
-  // (re-create if it already exists)
+function makeGradient(id, scale, steps = 60){
   defs.select(`#${id}`).remove();
-
-  const dom = scale.domain(),
-        lo  = dom[0],
-        hi  = dom[dom.length - 1];
-
+  const dom = scale.domain(), lo = dom[0], hi = dom[dom.length-1];
   const g = defs.append('linearGradient')
-      .attr('id', id)
-      .attr('x1', '0%').attr('y1', '100%')   // bottom
-      .attr('x2', '0%').attr('y2',   '0%');  // top
-
-  for (let i = 0; i <= steps; i++) {
-    const t   = i / steps,
-          val = lo + (hi - lo) * t;          // full range lo → hi
-    g.append('stop')
-      .attr('offset', `${t * 100}%`)
-      .attr('stop-color', scale(val));
+      .attr('id',id).attr('x1','0%').attr('y1','100%').attr('x2','0%').attr('y2','0%');
+  for(let i=0;i<=steps;i++){
+    const t=i/steps,val=lo+(hi-lo)*t;
+    g.append('stop').attr('offset',`${t*100}%`).attr('stop-color',scale(val));
   }
 }
 
-  /* tooltip */
-  const tooltip = svg.append('g').style('display','none');
-  tooltip.append('rect').attr('class','tooltip-bg')
-         .attr('x',-45).attr('y',-15).attr('width',90).attr('height',22).attr('rx',4);
-  const tooltipTxt = tooltip.append('text').attr('class','tooltip-text')
-         .attr('text-anchor','middle').attr('y',2);
+/* tooltip */
+const tooltip = svg.append('g').style('display','none');
+tooltip.append('rect').attr('class','tooltip-bg')
+       .attr('x',-75).attr('y',-30).attr('width',150).attr('height',56).attr('rx',6);
+const tooltipTxt = tooltip.append('text').attr('class','tooltip-text')
+       .attr('text-anchor','middle').attr('y',-12);
 
-  /* ────────────────  LOAD DATA  ───────────── */
-  Promise.all([
-    d3.csv('Probe_location.csv',d3.autoType),
-    d3.csv('fnirs_pre_summary.csv',d3.autoType),
-    d3.csv('fnirs_post_summary.csv',d3.autoType)
-  ]).then(([rawLoc,preRows,postRows])=>{
+/* LOAD DATA */
+Promise.all([
+  d3.csv('Probe_location.csv',d3.autoType),
+  d3.csv('fnirs_pre_summary.csv',d3.autoType),
+  d3.csv('fnirs_post_summary.csv',d3.autoType)
+]).then(([rawLoc,preRows,postRows])=>{
 
-    /* helpers */
-    function tidy(rows){
-      const keys = Object.keys(rows[0]);
-      const subjKey = keys.find(k=>/subject/i.test(k));
-      const chanKey = keys.find(k=>/chan/i.test(k));
-      const intKey  = keys.find(k=>/intensity|mean|abs/i.test(k));
-      const out = new Map();
-      rows.forEach(r=>{
-        const subj = +r[subjKey], chan = +r[chanKey]-1, val = +r[intKey];
-        if(!out.has(subj)) out.set(subj,Array(137).fill(NaN));
-        if(chan>=0 && chan<137) out.get(subj)[chan]=val;
-      });
-      return out;
-    }
-
-    /* probe XY */
-    const loc = rawLoc.slice(0,137).map(d=>{
-      const k = Object.keys(d);
-      return {x:+d[k[0]], y:+d[k[1]]};
+  /* tidy helpers */
+  function tidy(rows){
+    const k=Object.keys(rows[0]);
+    const subjKey=k.find(d=>/subject/i.test(d)),
+          chanKey=k.find(d=>/chan/i.test(d)),
+          intKey=k.find(d=>/intensity|mean|abs/i.test(d));
+    const out=new Map();
+    rows.forEach(r=>{
+      const subj=+r[subjKey], chan=+r[chanKey]-1, val=+r[intKey];
+      if(!out.has(subj)) out.set(subj,Array(137).fill(NaN));
+      if(chan>=0&&chan<137) out.get(subj)[chan]=val;
     });
+    return out;
+  }
 
-    const preMap  = tidy(preRows);
-    const postMap = tidy(postRows);
-    const subjects = Array.from(new Set([...preMap.keys(),...postMap.keys()]))
-                     .sort((a,b)=>a-b).slice(0,10);
-
-    /* slider cap */
-    subjRange.max = subjects.length;
-
-    /* Δ map */
-    const deltaMap = new Map();
-    subjects.forEach(s=>{
-      const out = Array(137).fill(NaN),
-            a = postMap.get(s)||[],
-            b = preMap.get(s)||[];
-      for(let i=0;i<137;i++)
-        if(!isNaN(a[i]) && !isNaN(b[i])) out[i]=a[i]-b[i];
-      deltaMap.set(s,out);
-    });
-
-    /* scales */
-    const xExtent = d3.extent(loc,d=>d.x),
-          yExtent = d3.extent(loc,d=>d.y);
-    const x = d3.scaleLinear().domain(xExtent)
-                .range([M.left,SIZE-M.right-26]);
-    const y = d3.scaleLinear().domain(yExtent)
-                .range([SIZE-M.bottom,M.top]);
-
-    /* brain group */
-    const brainG = svg.append('g').attr('id','brainGroup');
-
-    /* head geometry (unchanged) */
-    const xs = loc.map(d=>x(d.x)), ys = loc.map(d=>y(d.y));
-    const centerX=d3.mean(xs), centerY=d3.mean(ys);
-    const headR=Math.max(centerX-d3.min(xs),d3.max(xs)-centerX,
-                         centerY-d3.min(ys),d3.max(ys)-centerY)+18;
-    let earR=headR*.10;
-
-    const bounds={L:M.left,R:SIZE-M.right-26,T:M.top,B:SIZE-M.bottom};
-    earR=Math.min(earR,centerX-headR-bounds.L-4,bounds.R-(centerX+headR)-4);
-
-    /* outline */
-    const contourG = brainG.append('g').attr('class','contour');
-    contourG.append('path').attr('class','nose')
-      .attr('d',d3.symbol().type(d3.symbolTriangle).size(320)())
-      .attr('transform',`translate(${centerX},${centerY-headR-6}) rotate(180)`);
-    contourG.selectAll('.ear').data([-1,1]).enter()
-      .append('circle').attr('class','ear')
-      .attr('cx',d=>centerX+d*(headR+earR-2))
-      .attr('cy',centerY).attr('r',earR);
-
-    /* orientation labels */
-    brainG.append('text').attr('class','axis-label')
-      .attr('x',centerX).attr('y',centerY-headR-earR-12)
-      .attr('text-anchor','middle').text('Top');
-    brainG.append('text').attr('class','axis-label')
-      .attr('x',centerX).attr('y',centerY+headR+earR+14)
-      .attr('text-anchor','middle').text('Bottom');
-    brainG.append('text').attr('class','axis-label')
-      .attr('x',centerX-headR-earR-12).attr('y',centerY+1)
-      .attr('text-anchor','end').text('Left');
-    brainG.append('text').attr('class','axis-label')
-      .attr('x',centerX+headR+earR+12).attr('y',centerY+1)
-      .attr('text-anchor','start').text('Right');
-
-    /* auto-scale */
-    const outerR=headR+earR;
-    const availX=Math.min(centerX-bounds.L,bounds.R-centerX);
-    const availY=Math.min(centerY-bounds.T,bounds.B-centerY);
-    const scaleFac=Math.min(1,(Math.min(availX,availY)-4)/outerR);
-    brainG.attr('transform',
-      `translate(${centerX},${centerY}) scale(${scaleFac}) translate(${-centerX},${-centerY})`);
-
-    /* colour scales */
-    const intVals = subjects.flatMap(s=>(preMap.get(s)||[]).concat(postMap.get(s)||[]))
-                    .filter(v=>!isNaN(v));
-    const intScale = d3.scaleSequential()
-                       .domain([d3.min(intVals),d3.max(intVals)])
-                       .interpolator(d3.interpolateViridis);
-
-    const diffVals = subjects.flatMap(s=>deltaMap.get(s).filter(v=>!isNaN(v)));
-    const diffMax  = Math.max(Math.abs(d3.min(diffVals)),Math.abs(d3.max(diffVals)));
-    const diffScale = d3.scaleDiverging(d3.interpolateRdBu)
-                        .domain([ -diffMax, 0, diffMax]);
-
-    makeGradient('gradInt', intScale);
-    makeGradient('gradDiff', diffScale);
-
-    /* ───────────── LEGEND (dynamic) ────────── */
-    const legendSvg = d3.select('#legend-svg');
-
-    const legendRect = legendSvg.append('rect')
-        .attr('id','legend-rect')
-        .attr('x',20).attr('y',20)
-        .attr('width',20).attr('height',220)
-        .attr('fill','url(#gradInt)');
-
-    const legendScale = d3.scaleLinear().range([220,0]);
-    const legendAxisG = legendSvg.append('g')
-        .attr('id','legend-axis')
-        .attr('transform','translate(40,20)');
-
-    legendSvg.append('text')
-        .attr('id','legend-title')
-        .attr('x',30).attr('y',10)
-        .attr('text-anchor','middle')
-        .attr('class','legend-title')
-        .text('Intensity');
-
-        function updateLegend(dataset) {
-  const isDelta = dataset === 'delta';
-
-  legendRect.attr('fill', isDelta ? 'url(#gradDiff)' : 'url(#gradInt)');
-
-  legendScale.domain(
-    isDelta ? [-diffMax, diffMax]        // bottom = −, top = +
-            : intScale.domain()
-  );
-
-  const axis = d3.axisRight(legendScale)
-                 .ticks(6)
-                 .tickFormat(d => d.toFixed(isDelta ? 2 : 2));
-
-  legendAxisG.call(axis);
-  d3.select('#legend-title').text(isDelta ? 'Δ HbO' : 'Intensity');
-}
-
-    /* ───────────── DRAW CHANNELS ──────────── */
-    function draw(dataset,subjIdx){
-      const subj = subjects[subjIdx];
-      const vals = dataset==='pre'   ? preMap.get(subj)
-                 : dataset==='post'  ? postMap.get(subj)
-                 : deltaMap.get(subj);
-      const scale = dataset==='delta' ? diffScale : intScale;
-
-      const data = loc.map((p,i)=>({...p,intensity:vals?vals[i]:NaN,idx:i+1}));
-      const sel = brainG.selectAll('.dot').data(data,d=>d.idx);
-
-      sel.join(
-        enter=>enter.append('circle').attr('class','dot')
-          .attr('r',DOT_R)
-          .attr('cx',d=>x(d.x)).attr('cy',d=>y(d.y))
-          .attr('fill',d=>isNaN(d.intensity)?'#ccc':scale(d.intensity))
-          .on('mouseover',(ev,d)=>{
-            tooltip.style('display',null)
-                   .attr('transform',`translate(${x(d.x)},${y(d.y)-12})`);
-            tooltipTxt.text(isNaN(d.intensity)?`Ch ${d.idx}: N/A`
-                                             :`Ch ${d.idx}: ${d.intensity.toFixed(3)}`);
-          })
-          .on('mouseout',()=>tooltip.style('display','none')),
-        update=>update.transition().duration(250)
-          .attr('fill',d=>isNaN(d.intensity)?'#ccc':scale(d.intensity))
-      );
-
-      /* refresh legend */
-      updateLegend(dataset);
-    }
-
-    /* initial */
-    const state={dataset:'pre',subjIdx:0};
-    draw(state.dataset,state.subjIdx);
-
-    /* UI events */
-    d3.selectAll('input[name=dataset]').on('change',function(){
-      state.dataset=this.value;
-      draw(state.dataset,state.subjIdx);
-    });
-
-    subjRange.addEventListener('input',e=>{
-      state.subjIdx=+e.target.value-1;
-      subjLabel.textContent=subjects[state.subjIdx];
-      draw(state.dataset,state.subjIdx);
-    });
-    subjLabel.textContent=subjects[state.subjIdx];
+  /* probe XY */
+  const loc = rawLoc.slice(0,137).map(d=>{
+    const k=Object.keys(d); return {x:+d[k[0]],y:+d[k[1]]};
   });
-  </script>
 
-  <img src="assets/brain_illu.svg" alt="Brain illustration"
-       style="position:fixed;top:52%;left:48%;transform:translate(-50%,-50%);
-              width:1000px;height:auto;opacity:.1;pointer-events:none;z-index:-1;
-              filter:invert(1);">
+  const preMap = tidy(preRows), postMap = tidy(postRows);
+  const subjects = Array.from(new Set([...preMap.keys(),...postMap.keys()]))
+                     .sort((a,b)=>a-b).slice(0,10);
+  subjRange.max = subjects.length;
+
+  /* Δ map */
+  const deltaMap = new Map();
+  subjects.forEach(s=>{
+    const a=postMap.get(s)||[], b=preMap.get(s)||[], diff=Array(137).fill(NaN);
+    for(let i=0;i<137;i++) if(!isNaN(a[i])&&!isNaN(b[i])) diff[i]=a[i]-b[i];
+    deltaMap.set(s,diff);
+  });
+
+  /* scales */
+  const x = d3.scaleLinear(d3.extent(loc,d=>d.x), [M.left,SIZE-M.right-26]);
+  const y = d3.scaleLinear(d3.extent(loc,d=>d.y), [SIZE-M.bottom,M.top]);
+
+  /*  -------  REGION LABELS  (now based on *pixel* y-coordinate)  ------- */
+  const yPxVals = loc.map(d=>y(d.y)).sort(d3.ascending);
+  const yT1 = d3.quantile(yPxVals,0.33), yT2 = d3.quantile(yPxVals,0.66);
+  const region = d =>{
+    const yPx = y(d.y);
+    if (yPx <= yT1) return {name:'Frontal lobe', fn:'planning, attention & decision-making'};
+    if (yPx <= yT2) return {name:'Central sulcus', fn:'motor control & sensory integration'};
+    return {name:'Occipital lobe', fn:'visual processing'};
+  };
+
+  /* colour scales */
+  const intVals = subjects.flatMap(s=>(preMap.get(s)||[]).concat(postMap.get(s)||[])).filter(v=>!isNaN(v));
+  const intScale = d3.scaleSequential(d3.interpolateViridis).domain([d3.min(intVals),d3.max(intVals)]);
+  const diffVals = subjects.flatMap(s=>deltaMap.get(s)).filter(v=>!isNaN(v));
+  const diffMax = Math.max(Math.abs(d3.min(diffVals)),Math.abs(d3.max(diffVals)));
+  const diffScale = d3.scaleDiverging(d3.interpolateRdBu).domain([-diffMax,0,diffMax]);
+
+  makeGradient('gradInt',intScale);
+  makeGradient('gradDiff',diffScale);
+
+  /* legend */
+  const legendSvg = d3.select('#legend-svg');
+  const legendRect = legendSvg.append('rect')
+        .attr('x',20).attr('y',20).attr('width',20).attr('height',220)
+        .attr('fill','url(#gradInt)');
+  const legendScale = d3.scaleLinear().range([220,0]);
+  const legendAxisG = legendSvg.append('g')
+        .attr('transform','translate(40,20)');
+  legendSvg.append('text')
+        .attr('id','legend-title').attr('x',30).attr('y',10)
+        .attr('text-anchor','middle').attr('class','legend-title').text('Intensity');
+
+  const brainG = zoomLayer.append('g').attr('id','brainGroup'); // dots + labels live here
+
+  /* head geometry (orientation labels) */
+  const xs=loc.map(d=>x(d.x)), ys_px=loc.map(d=>y(d.y));
+  const cX=d3.mean(xs), cY=d3.mean(ys_px);
+  const headR=Math.max(cX-d3.min(xs),d3.max(xs)-cX,cY-d3.min(ys_px),d3.max(ys_px)-cY)+18;
+  let earR=headR*.10;
+
+  const bounds={L:M.left,R:SIZE-M.right-26,T:M.top,B:SIZE-M.bottom};
+  earR=Math.min(earR,cX-headR-bounds.L-4,bounds.R-(cX+headR)-4);
+
+  brainG.append('text').attr('class','axis-label')
+      .attr('x',cX).attr('y',cY-headR-earR-12).attr('text-anchor','middle').text('Top');
+  brainG.append('text').attr('class','axis-label')
+      .attr('x',cX).attr('y',cY+headR+earR+14).attr('text-anchor','middle').text('Bottom');
+  brainG.append('text').attr('class','axis-label')
+      .attr('x',cX-headR-earR-12).attr('y',cY+1).attr('text-anchor','end').text('Left');
+  brainG.append('text').attr('class','axis-label')
+      .attr('x',cX+headR+earR+12).attr('y',cY+1).attr('text-anchor','start').text('Right');
+
+  /* internal auto-scale (kept separate so outer zoom doesn’t reset it) */
+  const outerR=headR+earR;
+  const avail=Math.min(cX-bounds.L,bounds.R-cX,cY-bounds.T,bounds.B-cY)-4;
+  const scale0=Math.min(1,avail/outerR);
+  brainG.attr('transform',`translate(${cX},${cY}) scale(${scale0}) translate(${-cX},${-cY})`);
+
+  /* ---------- centred brain illustration (new) ---------- */
+const illuW  = outerR * 3.0;      // width  (a bit larger than scatter span)
+const illuH  = outerR * 3.1;      // height (brain is taller than wide)
+
+/* Put the SVG *behind* all other elements in brainG */
+brainG.insert('image', ':first-child')
+      .attr('href', 'assets/brain_illu.svg')
+      .attr('x', cX - illuW / 2)
+      .attr('y', cY - illuH / 2)
+      .attr('width',  illuW)
+      .attr('height', illuH)
+      .attr('preserveAspectRatio', 'xMidYMid meet')
+      .attr('opacity', 0.14)           // slightly brighter than before
+      .attr('pointer-events', 'none');
+
+
+  /* ------------ PLOT FUNCTION ------------- */
+  function updateLegend(ds){
+    const isΔ = ds==='delta';
+    legendRect.attr('fill', isΔ?'url(#gradDiff)':'url(#gradInt)');
+    legendScale.domain(isΔ?[-diffMax,diffMax]:intScale.domain());
+    const axis = d3.axisRight(legendScale).ticks(6).tickFormat(d=>d.toFixed(2));
+    legendAxisG.call(axis);
+    d3.select('#legend-title').text(isΔ?'Δ HbO':'Intensity');
+  }
+
+  const state={dataset:'pre',subjIdx:0};
+
+  function draw(ds,idx){
+    const subj=subjects[idx];
+    const vals = ds==='pre'?preMap.get(subj):
+                 ds==='post'?postMap.get(subj):deltaMap.get(subj);
+    const scale = ds==='delta'?diffScale:intScale;
+
+    const data = loc.map((p,i)=>({...p,intensity:vals?vals[i]:NaN,idx:i+1}));
+    const sel = brainG.selectAll('.dot').data(data,d=>d.idx);
+
+    sel.join(
+      enter=>enter.append('circle')
+        .attr('class','dot').attr('r',DOT_R)
+        .attr('cx',d=>x(d.x)).attr('cy',d=>y(d.y))
+        .attr('fill',d=>isNaN(d.intensity)?'#444':scale(d.intensity))
+        .on('mouseover',(ev,d)=>{
+          const info=region(d);
+          tooltip.style('display',null)
+                 .attr('transform',`translate(${x(d.x)},${y(d.y)-18})`);
+          tooltipTxt.selectAll('*').remove();
+          const lines=[
+            `Ch ${d.idx} · ${info.name}`,
+            isNaN(d.intensity)?'Value: N/A':`Value: ${d.intensity.toFixed(3)}`,
+            info.fn
+          ];
+          tooltipTxt.selectAll('tspan')
+            .data(lines)
+            .enter().append('tspan')
+            .attr('x',0)
+            .attr('dy',(d,i)=>i===0?0:12)
+            .text(t=>t);
+        })
+        .on('mouseout',()=>tooltip.style('display','none')),
+      update=>update.transition().duration(250)
+        .attr('fill',d=>isNaN(d.intensity)?'#444':scale(d.intensity))
+    );
+
+    updateLegend(ds);
+  }
+  draw(state.dataset,state.subjIdx);
+
+  /* UI handlers */
+  d3.selectAll('input[name=dataset]').on('change',function(){
+    state.dataset=this.value; draw(state.dataset,state.subjIdx);
+  });
+  subjRange.addEventListener('input',e=>{
+    state.subjIdx=+e.target.value-1;
+    subjLabel.textContent=subjects[state.subjIdx];
+    draw(state.dataset,state.subjIdx);
+  });
+  subjLabel.textContent=subjects[state.subjIdx];
+
+  /* --------- ZOOM & PAN ---------- */
+  const zoom = d3.zoom().scaleExtent([0.6,10]).on('zoom',ev=>{
+    zoomLayer.attr('transform',ev.transform);
+  });
+  svg.call(zoom);
+
+  /* zoom buttons */
+  d3.select('#zoom_in').on('click',()=>svg.transition().call(zoom.scaleBy,1.25));
+  d3.select('#zoom_out').on('click',()=>svg.transition().call(zoom.scaleBy,0.8));
+
+});
+</script>
 </body>
 </html>
