@@ -184,7 +184,9 @@
         .attr("y", d => d.delta < 0 ? y(0) : y(d.delta))
         .attr("width", x.bandwidth())
         .attr("height", d => Math.abs(y(d.delta) - y(0)))
-        .attr("fill", d => top3.has(d.subject) ? "#e17055" : "#74b9ff")
+        .attr("fill", d => d.delta > 0
+                   ? "var(--clr-positive)"  
+                   : "var(--clr-negative)") 
         .on("mouseover", (event, d) => {
           tooltip.style("opacity", 1)
                  .html(`<strong>Subject:</strong> ${d.subject}<br/><strong>ΔHbO:</strong> ${d.delta.toFixed(3)}`);
