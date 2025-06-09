@@ -580,6 +580,48 @@
         width: 100%;
       }
     }
+    .music-player {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;              /* move to left */
+      z-index: 100;
+      width: 300px;            /* give it some width */
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start; /* align contents to left */
+      gap: 8px;
+    }
+
+    .music-button {
+      background: #6c5ce7;
+      color: white;
+      border: none;
+      padding: 15px 20px;      /* larger button */
+      border-radius: 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;               /* more space around icon/text */
+      font-size: 1.1em;        /* bigger text */
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+
+    #sleepMusic {
+      width: 100%;             /* make the audio control fill the container */
+      outline: none;
+    }
+
+
+    .music-button:hover {
+      background: #a29bfe;
+      transform: translateY(-2px);
+    }
+
+    .music-button.playing {
+      background: #e84393;
+    }
+    @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css');
     
   </style>
 </head>
@@ -599,6 +641,20 @@
       <li><a href="#data"><i class="fas fa-database"></i> Data</a></li>
     </ul>
   </nav>
+  <div class="music-player">
+      <button id="ytToggle" class="music-button">
+        <i class="fas fa-play"></i> Play Music
+      </button>
+      <div id="ytPlayerContainer" style="display:none;">
+        <iframe
+          id="ytPlayer"
+          width="0" height="0"
+          src="https://www.youtube.com/embed/rA7m3iKpuko?enablejsapi=1&controls=0&loop=1&playlist=rA7m3iKpuko"
+          frameborder="0"
+          allow="autoplay"
+        ></iframe>
+      </div>
+    </div>
   
   <div class="progress-container">
     <div class="progress-bar" id="progressBar"></div>
@@ -1077,6 +1133,33 @@
           document.querySelector('nav a.active').classList.remove('active');
           a.classList.add('active');
         });
+      });
+    });
+  </script>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    let ytPlayer;
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player('ytPlayer');
+    }
+  
+    window.addEventListener('load', () => {
+      const btn       = document.getElementById('ytToggle');
+      const container = document.getElementById('ytPlayerContainer');
+  
+      btn.addEventListener('click', () => {
+        if (!ytPlayer) return;  // guard if API not initialized yet
+  
+        if (ytPlayer.getPlayerState() !== YT.PlayerState.PLAYING) {
+          container.style.display = 'block';
+          ytPlayer.playVideo();
+          btn.innerHTML = '<i class="fas fa-pause"></i> Pause Music';
+        } else {
+          ytPlayer.pauseVideo();
+          btn.innerHTML = '<i class="fas fa-play"></i> Play Music';
+        }
       });
     });
   </script>
